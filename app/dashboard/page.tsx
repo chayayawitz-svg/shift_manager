@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
+// התחברות ל-Supabase
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -54,25 +55,27 @@ export default function DashboardPage() {
         <h1 className="text-4xl font-black text-blue-900 mb-8 text-center">סיכום תוצאות מודל הבאלנס</h1>
         
         {isLoading ? (
-          <p className="text-center mt-10 font-bold">טוען נתונים...</p>
+          <p className="text-center mt-10 font-bold text-lg text-blue-900">טוען נתונים מהמערכת...</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 text-center">
-              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-blue-900">
-                <p className="text-gray-500 font-bold">סה"כ משיבים</p>
+            {/* כרטיסי סיכום עליונים */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-blue-900 text-center">
+                <p className="text-gray-500 font-bold text-lg">סה"כ משיבים</p>
                 <p className="text-5xl font-black text-blue-900">{results.length}</p>
               </div>
-              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-[#FF3366]">
-                <p className="text-gray-500 font-bold">ממוצע הובלה צוותי</p>
+              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-[#FF3366] text-center">
+                <p className="text-gray-500 font-bold text-lg">ממוצע הובלה צוותי</p>
                 <p className="text-5xl font-black text-[#FF3366]">
                   {(results.reduce((acc, curr) => acc + (curr.cat1_leadership || 0), 0) / results.length || 0).toFixed(1)}
                 </p>
               </div>
             </div>
 
+            {/* גרף עוגה מיושר ומתוקן */}
             <div className="bg-white p-10 rounded-[40px] shadow-2xl mb-12 border border-gray-100 overflow-hidden">
-              <h2 className="text-3xl font-black mb-10 text-blue-900 text-center">התפלגות חוזקות צוותית (ממוצע)</h2>
-              <div className="h-[700px] w-full flex justify-center items-center">
+              <h2 className="text-3xl font-black mb-6 text-blue-900 text-center">התפלגות חוזקות צוותית (ממוצע)</h2>
+              <div className="h-[700px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
                     <Pie
@@ -85,16 +88,26 @@ export default function DashboardPage() {
                         const oRadius = outerRadius || 0;
                         const centerX = cx || 0;
                         const centerY = cy || 0;
-                        const radius = oRadius + 60; 
-                        const x = centerX + radius * Math.cos(-mAngle * RADIAN);
-                        const y = centerY + radius * Math.sin(-mAngle * RADIAN);
+
+                        // רדיוס לטקסט - מורחק ב-45 פיקסלים מהעוגה
+                        const textRadius = oRadius + 45; 
+                        const x = centerX + textRadius * Math.cos(-mAngle * RADIAN);
+                        const y = centerY + textRadius * Math.sin(-mAngle * RADIAN);
+                        
                         return (
-                          <text x={x} y={y} fill="#4b5563" textAnchor={x > centerX ? 'start' : 'end'} dominantBaseline="central" fontSize="16" fontWeight="bold">
+                          <text 
+                            x={x} 
+                            y={y} 
+                            fill="#4b5563" 
+                            textAnchor="middle" // מבטיח שהקו יצביע למרכז המילה
+                            dominantBaseline="central" 
+                            fontSize="14" 
+                            fontWeight="bold"
+                          >
                             {`${name}: ${value}`}
                           </text>
                         );
                       }}
-                      // התיקון כאן: הסרנו את length כדי למנוע את ה-Error
                       labelLine={{ stroke: '#4b5563', strokeWidth: 2 }}
                       outerRadius={160}
                       innerRadius={100}
@@ -106,18 +119,24 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: "80px", fontWeight: "bold" }} />
+                    <Legend 
+                        verticalAlign="bottom" 
+                        height={36} 
+                        iconType="circle"
+                        wrapperStyle={{ paddingTop: "80px", fontSize: "14px", fontWeight: "bold" }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
-            
-            <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100">
+
+            {/* טבלה גולמית */}
+            <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100 mb-10">
                <div className="bg-[#0b1a40] text-white p-6 font-black text-2xl text-center">פירוט תשובות גולמיות</div>
                <div className="overflow-x-auto">
-                <table className="w-full text-right">
+                <table className="w-full text-right border-collapse">
                   <thead>
-                    <tr className="bg-gray-50 text-blue-900 border-b-2">
+                    <tr className="bg-gray-50 text-blue-900 border-b-2 border-gray-100">
                       <th className="p-5 font-bold">תאריך</th>
                       <th className="p-5 font-bold">שם מלא</th>
                       <th className="p-5 font-bold text-center">הובלה</th>
@@ -132,8 +151,10 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {results.map((row) => (
-                      <tr key={row.id} className="border-b hover:bg-blue-50/50">
-                        <td className="p-5 text-sm">{new Date(row.created_at).toLocaleDateString('he-IL')}</td>
+                      <tr key={row.id} className="border-b border-gray-50 hover:bg-blue-50/50 transition-all">
+                        <td className="p-5 text-sm text-gray-500">
+                          {new Date(row.created_at).toLocaleDateString('he-IL')}
+                        </td>
                         <td className="p-5 font-black text-blue-900">{row.full_name}</td>
                         <td className="p-5 font-bold text-center">{row.cat1_leadership}</td>
                         <td className="p-5 font-bold text-center">{row.cat2_soul_player}</td>
