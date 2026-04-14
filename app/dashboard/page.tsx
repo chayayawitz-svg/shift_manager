@@ -9,7 +9,7 @@ const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const COLORS = ['#FF3366', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#0b1a40'];
+const COLORS = ['#FF3366', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export default function DashboardPage() {
   const [results, setResults] = useState<any[]>([]);
@@ -30,15 +30,15 @@ export default function DashboardPage() {
 
   const calculateAverages = () => {
     if (results.length === 0) return [];
+    
+    // רשימת המיומנויות המעודכנת (6 מיומנויות)
     const keys = [
-      { key: 'cat1_leadership', label: 'הובלה' },
-      { key: 'cat2_soul_player', label: 'שחקן נשמה' },
-      { key: 'cat3_mutual_guarantee', label: 'ערבות הדדית' },
-      { key: 'cat4_professionalism', label: 'מקצועיות' },
-      { key: 'cat5_business_connection', label: 'חיבור לביזנס' },
-      { key: 'cat6_curiosity', label: 'סקרנות' },
-      { key: 'cat7_innovation', label: 'חדשנות' },
-      { key: 'cat8_partnership', label: 'שותפויות' }
+      { key: 'cat1_leadership', label: 'שינויים ומצבי לחץ' },
+      { key: 'cat2_soul_player', label: 'הנעה והובלה' },
+      { key: 'cat3_mutual_guarantee', label: 'חשיבה יצירתית וחדשנות' },
+      { key: 'cat4_professionalism', label: 'קילריות ויעדים' },
+      { key: 'cat5_business_connection', label: 'יוזמה והשפעה' },
+      { key: 'cat6_curiosity', label: 'עבודת צוות' }
     ];
 
     return keys.map(item => {
@@ -65,7 +65,7 @@ export default function DashboardPage() {
                 <p className="text-5xl font-black text-blue-900">{results.length}</p>
               </div>
               <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-[#FF3366] text-center">
-                <p className="text-gray-500 font-bold text-lg">ממוצע הובלה צוותי</p>
+                <p className="text-gray-500 font-bold text-lg">ממוצע התמודדות (צוותי)</p>
                 <p className="text-5xl font-black text-[#FF3366]">
                   {(results.reduce((acc, curr) => acc + (curr.cat1_leadership || 0), 0) / results.length || 0).toFixed(1)}
                 </p>
@@ -88,21 +88,14 @@ export default function DashboardPage() {
                         const oRadius = outerRadius || 0;
                         const centerX = cx || 0;
                         const centerY = cy || 0;
-
-                        // רדיוס לטקסט - מורחק ב-45 פיקסלים מהעוגה
                         const textRadius = oRadius + 45; 
                         const x = centerX + textRadius * Math.cos(-mAngle * RADIAN);
                         const y = centerY + textRadius * Math.sin(-mAngle * RADIAN);
                         
                         return (
                           <text 
-                            x={x} 
-                            y={y} 
-                            fill="#4b5563" 
-                            textAnchor="middle" // מבטיח שהקו יצביע למרכז המילה
-                            dominantBaseline="central" 
-                            fontSize="14" 
-                            fontWeight="bold"
+                            x={x} y={y} fill="#4b5563" textAnchor="middle" 
+                            dominantBaseline="central" fontSize="14" fontWeight="bold"
                           >
                             {`${name}: ${value}`}
                           </text>
@@ -120,9 +113,7 @@ export default function DashboardPage() {
                     </Pie>
                     <Tooltip />
                     <Legend 
-                        verticalAlign="bottom" 
-                        height={36} 
-                        iconType="circle"
+                        verticalAlign="bottom" height={36} iconType="circle"
                         wrapperStyle={{ paddingTop: "80px", fontSize: "14px", fontWeight: "bold" }}
                     />
                   </PieChart>
@@ -130,7 +121,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* טבלה גולמית */}
+            {/* טבלה גולמית מעודכנת */}
             <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100 mb-10">
                <div className="bg-[#0b1a40] text-white p-6 font-black text-2xl text-center">פירוט תשובות גולמיות</div>
                <div className="overflow-x-auto">
@@ -139,14 +130,12 @@ export default function DashboardPage() {
                     <tr className="bg-gray-50 text-blue-900 border-b-2 border-gray-100">
                       <th className="p-5 font-bold">תאריך</th>
                       <th className="p-5 font-bold">שם מלא</th>
-                      <th className="p-5 font-bold text-center">הובלה</th>
-                      <th className="p-5 font-bold text-center">נשמה</th>
-                      <th className="p-5 font-bold text-center">ערבות</th>
-                      <th className="p-5 font-bold text-center">מקצועיות</th>
-                      <th className="p-5 font-bold text-center">ביזנס</th>
-                      <th className="p-5 font-bold text-center">סקרנות</th>
-                      <th className="p-5 font-bold text-center">חדשנות</th>
-                      <th className="p-5 font-bold text-center">שותפויות</th>
+                      <th className="p-5 font-bold text-center text-xs">שינויים/לחץ</th>
+                      <th className="p-5 font-bold text-center text-xs">הנעה/הובלה</th>
+                      <th className="p-5 font-bold text-center text-xs">יצירתיות</th>
+                      <th className="p-5 font-bold text-center text-xs">קילריות</th>
+                      <th className="p-5 font-bold text-center text-xs">יוזמה</th>
+                      <th className="p-5 font-bold text-center text-xs">עבודת צוות</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -162,8 +151,6 @@ export default function DashboardPage() {
                         <td className="p-5 font-bold text-center">{row.cat4_professionalism}</td>
                         <td className="p-5 font-bold text-center">{row.cat5_business_connection}</td>
                         <td className="p-5 font-bold text-center">{row.cat6_curiosity}</td>
-                        <td className="p-5 font-bold text-center">{row.cat7_innovation}</td>
-                        <td className="p-5 font-bold text-center">{row.cat8_partnership}</td>
                       </tr>
                     ))}
                   </tbody>
