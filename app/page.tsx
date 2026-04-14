@@ -37,9 +37,9 @@ export default function Home() {
         email: email, 
         cat1_leadership: skills[sections[0]], 
         cat2_soul_player: skills[sections[1]], 
-        mutual_guarantee: skills[sections[2]], // זה השם שסידרנו ב-SQL
+       cat3_mutual_guarantee: skills[sections[2]], // זה השם שסידרנו ב-SQL
         cat4_professionalism: skills[sections[3]], 
-        cat5_business_co: skills[sections[4]], 
+       cat5_business_connection: skills[sections[4]], 
         cat6_curiosity: skills[sections[5]]
       }]);
 
