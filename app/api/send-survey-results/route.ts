@@ -4,60 +4,45 @@ export async function POST(req: Request) {
   try {
     const { name, email, skills } = await req.json();
 
-    // בניית הנתונים עבור הגרף בשרת
-    const labels = Object.keys(skills);
-    const data = Object.values(skills);
-
-    // יצירת קישור לתמונה דרך QuickChart (מעוצב בדיוק כמו המפה שלך)
+    // בניית הגרף בשרת QuickChart - מעוצב בדיוק כמו המפה שלך
     const chartConfig = {
       type: 'radar',
       data: {
-        labels: labels,
+        labels: Object.keys(skills),
         datasets: [{
-          label: 'מפת הבאלנס',
-          data: data,
+          data: Object.values(skills),
           backgroundColor: 'rgba(255, 51, 102, 0.4)',
           borderColor: '#FF3366',
           borderWidth: 3,
-          pointBackgroundColor: '#FF3366',
-          pointRadius: 4
+          pointBackgroundColor: '#FF3366'
         }]
       },
       options: {
         legend: { display: false },
         scale: {
-          gridLines: { color: 'rgba(255, 255, 255, 0.1)' },
+          gridLines: { color: 'rgba(255, 255, 255, 0.2)' },
           angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
-          ticks: { backdropColor: 'transparent', fontColor: '#fff', min: 0, max: 10, stepSize: 2 },
-          pointLabels: { fontColor: '#fff', fontSize: 12 }
+          ticks: { display: false, min: 0, max: 10 },
+          pointLabels: { fontColor: '#fff', fontSize: 14 }
         }
       }
     };
 
     const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&bg=020414`;
 
-    const skillsListHtml = Object.entries(skills)
-      .map(([skill, rating]) => `
-          <li style="background: #f8f9fa; border-right: 4px solid #0028A5; padding: 10px; margin-bottom: 5px; list-style: none; direction: rtl; text-align: right;">
-            <strong>${skill}:</strong> ${rating}/10
-          </li>`).join("");
+    const skillsHtml = Object.entries(skills)
+      .map(([s, v]) => `<li style="direction:rtl; text-align:right; margin-bottom:5px;"><b>${s}:</b> ${v}/10</li>`).join("");
 
     const emailHtml = `
-      <div dir="rtl" style="font-family: Arial; padding: 20px; background: #fff;">
-        <h2 style="color: #0028A5;">שלום ${name}, מפת הבאלנס שלך מוכנה!</h2>
-        <div style="margin: 20px 0;">
-          <img src="${chartUrl}" alt="מפת הבאלנס שלך" style="width: 100%; max-width: 500px; border-radius: 20px;" />
-        </div>
-        <ul style="padding: 0;">${skillsListHtml}</ul>
+      <div dir="rtl" style="font-family: Arial; padding: 20px;">
+        <h2 style="color: #0028A5;">היי ${name}, מפת הבאלנס שלך מוכנה!</h2>
+        <img src="${chartUrl}" style="width: 100%; max-width: 500px; border-radius: 20px; margin: 20px 0;" />
+        <ul style="padding: 0; list-style: none;">${skillsHtml}</ul>
       </div>`;
 
     await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "api-key": process.env.BREVO_API_KEY!
-      },
+      headers: { "accept": "application/json", "content-type": "application/json", "api-key": process.env.BREVO_API_KEY! },
       body: JSON.stringify({
         sender: { name: "מודל הבאלנס", email: "chayayawitz@gmail.com" },
         to: [{ email }, { email: "haya.y@yashir.co.il" }],
