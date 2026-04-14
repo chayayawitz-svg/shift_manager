@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Search, Calendar, Filter, RotateCcw } from "lucide-react";
+import { Search, Calendar, RotateCcw, User } from "lucide-react";
 
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
@@ -25,11 +25,9 @@ export default function DashboardPage() {
   const [filteredResults, setFilteredResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // מצבי מסננים
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [minScore, setMinScore] = useState(0);
 
   useEffect(() => {
     async function fetchResults() {
@@ -47,40 +45,17 @@ export default function DashboardPage() {
     fetchResults();
   }, []);
 
-  // לוגיקת הסינון - רצה בכל פעם שאחד המסננים משתנה
   useEffect(() => {
     let temp = [...results];
-
-    if (searchTerm) {
-      temp = temp.filter(r => r.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-
-    if (startDate) {
-      temp = temp.filter(r => new Date(r.created_at) >= new Date(startDate));
-    }
-
+    if (searchTerm) temp = temp.filter(r => r.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (startDate) temp = temp.filter(r => new Date(r.created_at) >= new Date(startDate));
     if (endDate) {
       const end = new Date(endDate);
-      end.setHours(23, 59, 59); // סוף היום
+      end.setHours(23, 59, 59);
       temp = temp.filter(r => new Date(r.created_at) <= end);
     }
-
-    if (minScore > 0) {
-      // מסנן אם לפחות אחת הקטגוריות מתחת לציון המינימלי (עוזר לאתר חולשות)
-      temp = temp.filter(r => 
-        keys.some(k => r[k.key] >= minScore)
-      );
-    }
-
     setFilteredResults(temp);
-  }, [searchTerm, startDate, endDate, minScore, results]);
-
-  const resetFilters = () => {
-    setSearchTerm("");
-    setStartDate("");
-    setEndDate("");
-    setMinScore(0);
-  };
+  }, [searchTerm, startDate, endDate, results]);
 
   const calculateAverages = () => {
     if (filteredResults.length === 0) return [];
@@ -92,144 +67,136 @@ export default function DashboardPage() {
 
   const pieData = calculateAverages();
 
+  // פונקציה לרינדור כיתובים מחוץ לעוגה כדי למנוע בלאגן ויזואלי
+  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value, name }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 30;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text x={x} y={y} fill="#1e3a8a" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="12" fontWeight="800">
+        {name} ({value})
+      </text>
+    );
+  };
+
   return (
-    <div className="min-h-screen p-8 bg-[#f4f7f6] text-right font-sans" dir="rtl">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-black text-blue-900 mb-8 text-center">סיכום תוצאות מודל הבאלנס</h1>
+    <div className="min-h-screen p-6 bg-[#f8fafc] text-right font-sans" dir="rtl">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-black text-blue-900 mb-10 text-center">דשבורד מודל הבאלנס</h1>
         
         {isLoading ? (
-          <p className="text-center mt-10 font-bold text-lg text-blue-900">טוען נתונים מהמערכת...</p>
+          <div className="flex justify-center mt-20 italic text-blue-900 animate-pulse">טוען נתונים...</div>
         ) : (
-          <>
-            {/* סרגל מסננים חדש */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm mb-8 border border-gray-100">
-              <div className="flex flex-wrap items-end gap-4">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="block text-sm font-bold text-gray-600 mb-1 flex items-center gap-1">
-                    <Search className="w-4 h-4" /> חיפוש לפי שם
-                  </label>
-                  <input 
-                    type="text" 
-                    className="w-full p-2 bg-gray-50 border rounded-xl focus:ring-2 ring-blue-100 outline-none transition"
-                    placeholder="הקלידו שם..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-600 mb-1 flex items-center gap-1">
-                    <Calendar className="w-4 h-4" /> מתאריך
-                  </label>
-                  <input 
-                    type="date" 
-                    className="p-2 bg-gray-50 border rounded-xl outline-none"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-600 mb-1 flex items-center gap-1">
-                    <Calendar className="w-4 h-4" /> עד תאריך
-                  </label>
-                  <input 
-                    type="date" 
-                    className="p-2 bg-gray-50 border rounded-xl outline-none"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-
-                <button 
-                  onClick={resetFilters}
-                  className="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition"
-                  title="איפוס מסננים"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                </button>
+          <div className="grid grid-cols-1 gap-8">
+            
+            {/* סיכום כמותי */}
+            <div className="flex justify-center">
+              <div className="bg-white p-6 rounded-3xl shadow-sm border-b-4 border-blue-900 text-center min-w-[250px]">
+                <p className="text-gray-400 font-bold">סה"כ משיבים</p>
+                <p className="text-5xl font-black text-blue-900">{filteredResults.length}</p>
               </div>
             </div>
 
-            {/* כרטיס סיכום עליון */}
-            <div className="flex justify-center mb-10">
-              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-blue-900 text-center min-w-[300px] transition-transform hover:scale-105">
-                <p className="text-gray-500 font-bold text-lg">סה"כ משיבים (מסונן)</p>
-                <p className="text-6xl font-black text-blue-900">{filteredResults.length}</p>
-                {filteredResults.length !== results.length && (
-                  <p className="text-xs text-blue-400 mt-2 font-bold">מתוך {results.length} סה"כ</p>
-                )}
+            {/* גרף עוגה משודרג */}
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-black mb-8 text-blue-900 text-center text-pretty">התפלגות חוזקות צוותית (ממוצע)</h2>
+              <div className="h-[500px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%" cy="50%"
+                      innerRadius={80}
+                      outerRadius={140}
+                      paddingAngle={8}
+                      dataKey="value"
+                      label={renderCustomLabel}
+                      labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: '40px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            {filteredResults.length === 0 ? (
-              <div className="bg-white p-20 rounded-[40px] text-center shadow-sm">
-                <Filter className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                <p className="text-2xl font-bold text-gray-400">לא נמצאו תוצאות העונות לסינון הנבחר</p>
+            {/* טבלה עם מסננים מובנים */}
+            <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-blue-950 p-6">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                  <h2 className="text-xl font-black text-white">פירוט תשובות גולמיות</h2>
+                  
+                  {/* שורת המסננים בתוך הכותרת */}
+                  <div className="flex flex-wrap gap-3 bg-white/10 p-2 rounded-2xl backdrop-blur-md">
+                    <div className="relative">
+                      <Search className="absolute right-3 top-2.5 w-4 h-4 text-white/50" />
+                      <input 
+                        type="text" placeholder="חיפוש לפי שם..." 
+                        className="bg-white/10 border border-white/20 text-white text-sm rounded-xl py-2 pr-9 pl-4 outline-none focus:bg-white/20 w-44 placeholder:text-white/40"
+                        value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl px-3 py-1">
+                      <Calendar className="w-4 h-4 text-white/50" />
+                      <input 
+                        type="date" className="bg-transparent text-white text-xs outline-none invert"
+                        value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                      />
+                      <span className="text-white/30 text-xs">עד</span>
+                      <input 
+                        type="date" className="bg-transparent text-white text-xs outline-none invert"
+                        value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                      />
+                    </div>
+                    <button onClick={() => { setSearchTerm(""); setStartDate(""); setEndDate(""); }} className="p-2 hover:bg-white/10 rounded-xl text-white/70 transition">
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <>
-                {/* גרף עוגה */}
-                <div className="bg-white p-10 rounded-[40px] shadow-2xl mb-12 border border-gray-100">
-                  <h2 className="text-3xl font-black mb-6 text-blue-900 text-center">התפלגות חוזקות צוותית (ממוצע)</h2>
-                  <div className="h-[600px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%" cy="50%"
-                          outerRadius={160} innerRadius={100}
-                          paddingAngle={5} dataKey="value"
-                          label={({ name, value }) => `${name}: ${value}`}
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend verticalAlign="bottom" height={36} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
 
-                {/* טבלה גולמית */}
-                <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100">
-                   <div className="bg-[#0b1a40] text-white p-6 font-black text-2xl text-center flex justify-between items-center px-12">
-                     <span>פירוט תשובות גולמיות</span>
-                     <span className="text-sm font-normal opacity-70">מציג {filteredResults.length} שורות</span>
-                   </div>
-                   <div className="overflow-x-auto">
-                    <table className="w-full text-right border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50 text-blue-900 border-b-2 border-gray-100">
-                          <th className="p-5 font-bold">תאריך</th>
-                          <th className="p-5 font-bold">שם מלא</th>
-                          {keys.map(k => <th key={k.key} className="p-5 font-bold text-center text-xs">{k.label}</th>)}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredResults.map((row) => (
-                          <tr key={row.id} className="border-b border-gray-50 hover:bg-blue-50/50 transition-all">
-                            <td className="p-5 text-sm text-gray-400">
-                              {new Date(row.created_at).toLocaleDateString('he-IL')}
-                            </td>
-                            <td className="p-5 font-black text-blue-900">{row.full_name}</td>
-                            <td className="p-5 font-bold text-center">{row.cat1_leadership}</td>
-                            <td className="p-5 font-bold text-center">{row.cat2_soul_player}</td>
-                            <td className="p-5 font-bold text-center">{row.cat3_mutual_guarantee}</td>
-                            <td className="p-5 font-bold text-center">{row.cat4_professionalism}</td>
-                            <td className="p-5 font-bold text-center">{row.cat5_business_connection}</td>
-                            <td className="p-5 font-bold text-center">{row.cat6_curiosity}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
+              <div className="overflow-x-auto">
+                <table className="w-full text-right">
+                  <thead>
+                    <tr className="bg-gray-50 text-blue-900 border-b">
+                      <th className="p-4 text-sm font-bold">תאריך</th>
+                      <th className="p-4 text-sm font-bold">שם העובד/ת</th>
+                      {keys.map(k => <th key={k.key} className="p-4 text-[10px] font-bold text-center bg-blue-50/30 leading-tight w-20">{k.label}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredResults.length > 0 ? filteredResults.map((row) => (
+                      <tr key={row.id} className="border-b hover:bg-slate-50 transition-colors">
+                        <td className="p-4 text-xs text-gray-400">{new Date(row.created_at).toLocaleDateString('he-IL')}</td>
+                        <td className="p-4 font-bold text-blue-900 flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs">
+                            <User className="w-4 h-4" />
+                          </div>
+                          {row.full_name}
+                        </td>
+                        <td className="p-4 text-center font-black text-gray-700">{row.cat1_leadership}</td>
+                        <td className="p-4 text-center font-black text-gray-700">{row.cat2_soul_player}</td>
+                        <td className="p-4 text-center font-black text-gray-700">{row.cat3_mutual_guarantee}</td>
+                        <td className="p-4 text-center font-black text-gray-700">{row.cat4_professionalism}</td>
+                        <td className="p-5 text-center font-black text-gray-700">{row.cat5_business_connection}</td>
+                        <td className="p-4 text-center font-black text-gray-700">{row.cat6_curiosity}</td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={8} className="p-20 text-center text-gray-400 font-bold">לא נמצאו תוצאות לסינון הנבחר</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
