@@ -9,12 +9,12 @@ import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
 
-// הגדרות חיבור ל-Supabase
+// חיבור ל-Supabase
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// 6 המיומנויות המעודכנות
+// 6 מיומנויות בלבד
 const sections = [
   "התמודדות עם שינויים ומצבי לחץ",
   "הנעה והובלה",
@@ -24,6 +24,9 @@ const sections = [
   "עבודת צוות",
 ];
 
+/* -------------------------------------------------
+   רכיבי עיצוב
+------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
     <label className="text-xl font-bold text-blue-950 block">{skill}</label>
@@ -104,43 +107,46 @@ export default function Home() {
     setStatus(null);
 
     try {
-      // 1. צילום המפה
+      // צילום מפה
       let png = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, { scale: 2, useCORS: true, backgroundColor: "#020414" });
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // 2. שמירה ל-Supabase - עם טיפול בשגיאות שלא חוסם
+      // שמירה ל-Supabase - 6 קטגוריות בלבד!
       const { error: dbError } = await supabase.from('survey_results').insert([
         { 
-          full_name: name, email: email, 
-          cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
-          cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
-          cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]],
-          cat7_innovation: 0, cat8_partnership: 0
+          full_name: name, 
+          email: email, 
+          cat1_leadership: skills[sections[0]], 
+          cat2_soul_player: skills[sections[1]], 
+          cat3_mutual_guarantee: skills[sections[2]], 
+          cat4_professionalism: skills[sections[3]], 
+          cat5_business_connection: skills[sections[4]], 
+          cat6_curiosity: skills[sections[5]]
         }
       ]);
 
-      if (dbError) console.warn("Supabase check:", dbError.message);
+      if (dbError) throw dbError;
 
-      // 3. שליחה למייל
-      const mailResponse = await fetch("/api/send-survey-results", {
+      // שליחה למייל
+      const mailRes = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, skills, chartPngBase64: png }),
       });
-      
-      if (mailResponse.ok) {
+
+      if (mailRes.ok) {
         setStatus("success");
         setName(""); setEmail("");
         setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
       } else {
-        setStatus("error");
+        throw new Error("Mail failed");
       }
 
     } catch (error) { 
-      console.error(error);
+      console.error("Error:", error);
       setStatus("error"); 
     } finally {
       setIsSubmitting(false);
@@ -164,7 +170,6 @@ export default function Home() {
           <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition disabled:bg-gray-400">
             {isSubmitting ? "מייצר מפה..." : "שלחו לי את המפה !"}
           </button>
-          
           {status === "success" && (
             <p className="text-green-600 text-center mt-6 font-black text-xl">✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.</p>
           )}
