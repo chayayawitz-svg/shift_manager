@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
-// התחברות ל-Supabase
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -55,16 +54,15 @@ export default function DashboardPage() {
         <h1 className="text-4xl font-black text-blue-900 mb-8 text-center">סיכום תוצאות מודל הבאלנס</h1>
         
         {isLoading ? (
-          <p className="text-center mt-10 font-bold text-lg">טוען נתונים מהמערכת...</p>
+          <p className="text-center mt-10">טוען נתונים...</p>
         ) : (
           <>
-            {/* כרטיסי סיכום עליונים */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-blue-900">
+              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-blue-900 text-center">
                 <p className="text-gray-500 font-bold text-lg">סה"כ משיבים</p>
                 <p className="text-5xl font-black text-blue-900">{results.length}</p>
               </div>
-              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-[#FF3366]">
+              <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-[#FF3366] text-center">
                 <p className="text-gray-500 font-bold text-lg">ממוצע הובלה צוותי</p>
                 <p className="text-5xl font-black text-[#FF3366]">
                   {(results.reduce((acc, curr) => acc + (curr.cat1_leadership || 0), 0) / results.length || 0).toFixed(1)}
@@ -72,24 +70,31 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* גרף עוגה עם תוויות חיצוניות */}
-            <div className="bg-white p-10 rounded-[40px] shadow-2xl mb-12 overflow-hidden border border-gray-100">
-              <h2 className="text-3xl font-black mb-6 text-blue-900 text-center">התפלגות חוזקות צוותית (ממוצע)</h2>
-              <div className="h-[600px] w-full flex justify-center items-center">
+            <div className="bg-white p-10 rounded-[40px] shadow-2xl mb-12 border border-gray-100">
+              <h2 className="text-3xl font-black mb-10 text-blue-900 text-center">התפלגות חוזקות צוותית (ממוצע)</h2>
+              <div className="h-[650px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 20, right: 120, bottom: 20, left: 120 }}>
+                  <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      // פונקציית תווית חיצונית
-                      label={({ name, value }) => `${name}: ${value}`}
-                      // הגדרת הקו המחבר
+                      // השינוי המרכזי: פונקציית Label שמרחיקה את הטקסט מהמרכז
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, value, name }) => {
+                        const RADIAN = Math.PI / 180;
+                        const radius = outerRadius + 40; // מרחיק את המילים ב-40 פיקסלים מהעיגול
+                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        return (
+                          <text x={x} y={y} fill="#4b5563" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="14" fontWeight="bold">
+                            {`${name}: ${value}`}
+                          </text>
+                        );
+                      }}
                       labelLine={{ stroke: '#4b5563', strokeWidth: 2 }}
-                      // רדיוס קטן יותר לעיגול כדי לתת מקום לטקסט
-                      outerRadius={90}
-                      innerRadius={60}
-                      paddingAngle={8}
+                      outerRadius={100} // העיגול עצמו נשאר קטן
+                      innerRadius={70}
+                      paddingAngle={5}
                       dataKey="value"
                     >
                       {pieData.map((entry, index) => (
@@ -99,16 +104,15 @@ export default function DashboardPage() {
                     <Tooltip />
                     <Legend 
                         verticalAlign="bottom" 
-                        height={50} 
+                        height={36} 
                         iconType="circle"
-                        wrapperStyle={{ paddingTop: "60px", fontSize: "14px", fontWeight: "bold" }}
+                        wrapperStyle={{ paddingTop: "60px" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* טבלת הנתונים המלאה */}
             <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100">
                <div className="bg-[#0b1a40] text-white p-6 font-black text-2xl text-center">פירוט תשובות גולמיות</div>
                <div className="overflow-x-auto">
@@ -130,18 +134,16 @@ export default function DashboardPage() {
                   <tbody>
                     {results.map((row) => (
                       <tr key={row.id} className="border-b border-gray-50 hover:bg-blue-50/50 transition-all">
-                        <td className="p-5 text-sm text-gray-500">
-                          {new Date(row.created_at).toLocaleDateString('he-IL')}
-                        </td>
+                        <td className="p-5 text-sm text-gray-500">{new Date(row.created_at).toLocaleDateString('he-IL')}</td>
                         <td className="p-5 font-black text-blue-900">{row.full_name}</td>
-                        <td className="p-5 font-bold">{row.cat1_leadership}</td>
-                        <td className="p-5 font-bold">{row.cat2_soul_player}</td>
-                        <td className="p-5 font-bold">{row.cat3_mutual_guarantee}</td>
-                        <td className="p-5 font-bold">{row.cat4_professionalism}</td>
-                        <td className="p-5 font-bold">{row.cat5_business_connection}</td>
-                        <td className="p-5 font-bold">{row.cat6_curiosity}</td>
-                        <td className="p-5 font-bold">{row.cat7_innovation}</td>
-                        <td className="p-5 font-bold">{row.cat8_partnership}</td>
+                        <td className="p-5 font-bold text-center">{row.cat1_leadership}</td>
+                        <td className="p-5 font-bold text-center">{row.cat2_soul_player}</td>
+                        <td className="p-5 font-bold text-center">{row.cat3_mutual_guarantee}</td>
+                        <td className="p-5 font-bold text-center">{row.cat4_professionalism}</td>
+                        <td className="p-5 font-bold text-center">{row.cat5_business_connection}</td>
+                        <td className="p-5 font-bold text-center">{row.cat6_curiosity}</td>
+                        <td className="p-5 font-bold text-center">{row.cat7_innovation}</td>
+                        <td className="p-5 font-bold text-center">{row.cat8_partnership}</td>
                       </tr>
                     ))}
                   </tbody>
