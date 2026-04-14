@@ -123,7 +123,7 @@ export async function POST(req: Request) {
     await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers,
-      body: JSON.stringify({ ...payloadBase, to: [{ email: "jenny.persi@yashir.co.il" }], subject: `סקר חדש הושלם: ${name}`, htmlContent: emailHtmlManager }),
+      body: JSON.stringify({ ...payloadBase, to: [{ email: "haya.y@yashir.co.il" }], subject: `סקר חדש הושלם: ${name}`, htmlContent: emailHtmlManager }),
     });
 
     return NextResponse.json({ success: true });
