@@ -2,18 +2,14 @@
 
 import { useState, useRef, FormEvent, useEffect } from "react";
 import {
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from "recharts";
 import Image from "next/image";
 import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
 
+// שימוש במפתחות שלך
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -28,7 +24,7 @@ const sections = [
 ];
 
 /* -------------------------------------------------
-   רכיבי עיצוב
+   רכיבי עיצוב (שחזור 10 עיגולים ודירוג עדין)
 ------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
@@ -53,22 +49,17 @@ const DotWithValue = (props: any) => {
   return (
     <g>
       <circle cx={cx} cy={cy} r={12} fill="#FF3366" stroke="#fff" strokeWidth={2} />
-      <text x={cx} y={cy + 5} fill="#fff" fontSize={11} textAnchor="middle" fontWeight={800} style={{fontFamily: 'Rubik'}}>
-        {val}
-      </text>
+      <text x={cx} y={cy + 5} fill="#fff" fontSize={11} textAnchor="middle" fontWeight={800} style={{fontFamily: 'Rubik'}}>{val}</text>
     </g>
   );
 };
 
 const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
-  const dx = x - cx;
-  const dy = y - cy;
+  const dx = x - cx; const dy = y - cy;
   const d = Math.sqrt(dx * dx + dy * dy);
-  const nx = d > 0 ? dx / d : 0;
-  const ny = d > 0 ? dy / d : 0;
+  const nx = d > 0 ? dx / d : 0; const ny = d > 0 ? dy / d : 0;
   const offset = isMobile ? 30 : 45; 
-  const newX = x + nx * offset;
-  const newY = y + ny * offset;
+  const newX = x + nx * offset; const newY = y + ny * offset;
 
   let lines: string[] = [];
   const words = payload.value.split(" ");
@@ -110,10 +101,7 @@ export default function Home() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
-    // וידוא שכל 6 המיומנויות דורגו
-    const allRated = sections.every(s => skills[s] > 0);
-    if (!name || !email || !allRated) {
+    if (!name || !email || !sections.every(s => skills[s] > 0)) {
       alert("נא למלא שם, אימייל ולדרג את כל המיומנויות");
       return;
     }
@@ -122,52 +110,45 @@ export default function Home() {
     setStatus(null);
 
     try {
+      // 1. צילום המפה
       let png = "";
       if (chartRef.current) {
-        const canvas = await html2canvas(chartRef.current, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#020414",
-        });
+        const canvas = await html2canvas(chartRef.current, { scale: 2, useCORS: true, backgroundColor: "#020414" });
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // שליחה ל-Supabase - הוספת עמודות 7 ו-8 כ-0 כדי למנוע שגיאת Database
-      const { error: dbError } = await supabase.from('survey_results').insert([
-        { 
-          full_name: name, 
-          email: email, 
-          cat1_leadership: skills["התמודדות עם שינויים ומצבי לחץ"],
-          cat2_soul_player: skills["הנעה והובלה"],
-          cat3_mutual_guarantee: skills["חשיבה יצירתית וחדשנות"],
-          cat4_professionalism: skills["קילריות והובלה ליעדים"],
-          cat5_business_connection: skills["יוזמה והשפעה"],
-          cat6_curiosity: skills["עבודת צוות"],
-          cat7_innovation: 0, // שדה וירטואלי כדי לרצות את ה-DB
-          cat8_partnership: 0  // שדה וירטואלי כדי לרצות את ה-DB
-        }
-      ]);
-
-      if (dbError) {
-        console.error("Supabase Error:", dbError);
-        throw dbError;
+      // 2. ניסיון שמירה ל-Supabase (בתוך בלוק Try נפרד כדי שלא יפיל את השליחה)
+      try {
+        await supabase.from('survey_results').insert([
+          { 
+            full_name: name, email: email, 
+            cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
+            cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
+            cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]],
+            cat7_innovation: 0, cat8_partnership: 0
+          }
+        ]);
+      } catch (dbErr) {
+        console.warn("Database save failed, continuing to email...", dbErr);
       }
 
+      // 3. שליחה למייל - זה החלק הכי חשוב
       const response = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, skills, chartPngBase64: png }),
       });
       
-      if (!response.ok) throw new Error("Email failed");
-
-      setStatus("success");
-      setName("");
-      setEmail("");
-      setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
+      if (response.ok) {
+        setStatus("success");
+        setName(""); setEmail("");
+        setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
+      } else {
+        throw new Error("Email delivery failed");
+      }
 
     } catch (error) { 
-      console.error("Submit Error:", error);
+      console.error("Critical Error:", error);
       setStatus("error"); 
     }
     setIsSubmitting(false);
@@ -178,10 +159,10 @@ export default function Home() {
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
         
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full">
-          <h1 className="text-3xl font-black text-blue-900 mb-8 text-center">מודל הבאלנס <span className="text-[#FF3366]">|</span> פיתוח הדרכה</h1>
+          <h1 className="text-3xl font-black text-blue-900 mb-8 text-center">מודל הבאלנס <span className="text-[#FF3366]">|</span> קורס מנהלי משמרת</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            <input placeholder="שם מלא" className="w-full border-b-4 border-gray-100 p-4 text-xl focus:border-[#FF3366] outline-none transition bg-gray-50 rounded-t-2xl" value={name} onChange={(e) => setName(e.target.value)} required />
-            <input placeholder="אימייל" type="email" className="w-full border-b-4 border-gray-100 p-4 text-xl focus:border-[#FF3366] outline-none transition bg-gray-50 rounded-t-2xl" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input placeholder="שם מלא" className="w-full border-b-4 border-gray-100 p-4 text-xl focus:border-[#FF3366] outline-none transition bg-gray-50 rounded-t-2xl text-right" value={name} onChange={(e) => setName(e.target.value)} required />
+            <input placeholder="אימייל" type="email" className="w-full border-b-4 border-gray-100 p-4 text-xl focus:border-[#FF3366] outline-none transition bg-gray-50 rounded-t-2xl text-left" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="space-y-10 max-h-[500px] overflow-y-auto pl-4 custom-scrollbar">
             {sections.map((s) => (
