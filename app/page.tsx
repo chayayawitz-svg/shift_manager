@@ -14,6 +14,7 @@ import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas"; // ודאי שהתקנת: npm install html2canvas
 
+// התחברות ל-Supabase שלך
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -30,7 +31,7 @@ const sections = [
 ];
 
 /* -------------------------------------------------
-   רכיבים ויזואליים - הגדלת פונטים לחדות
+   רכיבים ויזואליים - שחזור המראה הישן והעדין
 ------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
@@ -48,20 +49,22 @@ const Stars = ({ skill, value, onChange }: any) => (
   </div>
 );
 
+// שחזור הנקודות העדינות עם המספרים בגרף
 const DotWithValue = (props: any) => {
   const { cx, cy, value } = props;
   if (!value) return null;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={14} fill="#FF3366" stroke="#fff" strokeWidth={2} />
-      {/* הגדלת המספר בתוך הנקודה ל-13 */}
-      <text x={cx} y={cy + 5} fill="#fff" fontSize={13} textAnchor="middle" fontWeight={900} style={{fontFamily: 'Rubik'}}>
+      {/* שחזור הרדיוס ל-12 והפונט ל-11 - עדין כמו קודם */}
+      <circle cx={cx} cy={cy} r={12} fill="#FF3366" stroke="#fff" strokeWidth={2} />
+      <text x={cx} y={cy + 5} fill="#fff" fontSize={11} textAnchor="middle" fontWeight={800} style={{fontFamily: 'Rubik'}}>
         {value}
       </text>
     </g>
   );
 };
 
+// שחזור יישור הטקסט מסביב לגרף - בדיוק כמו בתמונה הישנה
 const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
   const dx = x - cx;
   const dy = y - cy;
@@ -69,25 +72,27 @@ const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
   const nx = d > 0 ? dx / d : 0;
   const ny = d > 0 ? dy / d : 0;
   
-  // הרחקת הטקסט מהגרף
-  const offset = isMobile ? 35 : 55; 
+  // שחזור ה-offset המקורי והקטן (30 בנייד, 45 במחשב) - זה יחזיר את המילים פנימה
+  const offset = isMobile ? 30 : 45; 
   const newX = x + nx * offset;
   const newY = y + ny * offset;
 
   let lines: string[] = [];
+  
+  // שחזור שבירת השורות העדינה
   const words = payload.value.split(" ");
   let current = "";
   words.forEach((w: string) => {
-    if ((current + " " + w).length > 8) { lines.push(current); current = w; } 
+    if ((current + " " + w).length > 7) { lines.push(current); current = w; } 
     else { current += (current ? " " : "") + w; }
   });
   if (current) lines.push(current);
 
   return (
-    /* הגדלת הפונט של הכותרות ל-14 (או 11 בנייד) */
-    <text x={newX} y={newY} textAnchor="middle" fill="#fff" fontSize={isMobile ? 11 : 14} fontWeight={700} style={{fontFamily: 'Rubik'}}>
+    /* שחזור גודל פונט עדין - 9px בנייד, 10px במחשב - כמו שאהבת */
+    <text x={newX} y={newY} textAnchor="middle" fill="#fff" fontSize={isMobile ? 9 : 10} fontWeight={700} style={{fontFamily: 'Rubik'}}>
       {lines.map((line, i) => (
-        <tspan key={i} x={newX} dy={i === 0 ? 0 : (isMobile ? 12 : 16)}>{line}</tspan>
+        <tspan key={i} x={newX} dy={i === 0 ? 0 : (isMobile ? 10 : 12)}>{line}</tspan>
       ))}
     </text>
   );
@@ -108,6 +113,16 @@ export default function Home() {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
     window.addEventListener("resize", checkMobile);
+    
+    const style = document.createElement("style");
+    style.innerHTML = `
+      @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap');
+      * { font-family: 'Rubik', sans-serif !important; direction: rtl; }
+      .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #FF3366; border-radius: 10px; }
+    `;
+    document.head.appendChild(style);
+    
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
@@ -123,14 +138,14 @@ export default function Home() {
     setStatus(null);
 
     try {
-      // --- יצירת תמונה ברזולוציה גבוהה (Scale 4) ---
+      // --- צילום תמונה חדה (Scale 3) מבלי לשנות את העיצוב ---
       let png = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, {
-          scale: 4, 
+          scale: 3, // שומר על חדות במייל, אבל לא משנה את מראה הגרף על המסך
           useCORS: true,
-          backgroundColor: "#0b1a40",
-          windowWidth: 1000, // מבטיח שהגרף לא יתכווץ בצילום
+          logging: false,
+          backgroundColor: "#020414", // שחזור הרקע הכהה והמקורי לצילום
         });
         png = canvas.toDataURL("image/png", 1.0).split(",")[1];
       }
@@ -150,7 +165,7 @@ export default function Home() {
         }
       ]);
 
-      // שליחה ל-API
+      // שליחה ל-API המקורי שלך
       const response = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,33 +199,37 @@ export default function Home() {
             ))}
           </div>
           <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition">
-            {isSubmitting ? "מייצר מפה ברורה..." : "שלחו לי את המפה !"}
+            {isSubmitting ? "מייצר מפה..." : "שלחו לי את המפה !"}
           </button>
           {status === "success" && <p className="text-green-600 text-center mt-6 font-black text-xl">✓ הסקר נשלח בהצלחה!</p>}
         </form>
 
-        {/* תצוגת הגרף שצולמת */}
-        <div ref={chartRef} className="flex-1 bg-gradient-to-br from-[#3b002a] via-[#050824] to-[#020414] rounded-[40px] p-4 lg:p-12 flex flex-col items-center justify-center shadow-2xl min-h-[600px] border-2 border-white/10 w-full overflow-hidden relative">
-          <div className="text-center mb-6">
-            <p className="text-white/70 font-bold tracking-widest uppercase text-sm mb-2">דוח מיומנויות אישי</p>
-            <h2 className="text-2xl lg:text-4xl font-black text-[#FF3366]">
-              {name ? `המפה של ${name}` : "המפה האישית שלך"}
-            </h2>
-          </div>
+        {/* תצוגת הגרף - שחזור המראה הישן והעדין */}
+        <div ref={chartRef} className="flex-1 bg-gradient-to-br from-[#3b002a] via-[#050824] to-[#020414] rounded-[40px] p-4 lg:p-12 flex flex-col items-center justify-center shadow-2xl min-h-[600px] lg:min-h-[650px] border-2 border-white/10 w-full overflow-hidden relative">
+          
+          {/* שחזור הכותרת העדינה המקורית (כמו בתמונה השנייה) */}
+          <h2 className="text-2xl lg:text-3xl font-black text-white mb-8 bg-[#FF3366] px-8 py-2 rounded-full shadow-lg">
+            {name ? `המפה של ${name}` : "המפה האישית שלך"}
+          </h2>
 
           <div className="w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={isMobile ? 450 : 600}>
-              <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? 100 : 200} data={chartData}>
+            <ResponsiveContainer width="100%" height={isMobile ? 450 : 550}>
+              <RadarChart 
+                cx="50%" cy="50%" 
+                outerRadius={isMobile ? 95 : 180} 
+                data={chartData} 
+                margin={isMobile ? { top: 40, right: 60, bottom: 40, left: 60 } : { top: 20, right: 30, bottom: 20, left: 30 }}
+              >
                 <PolarGrid gridType="circle" stroke="#4B5563" strokeDasharray="3 3" />
                 <PolarRadiusAxis domain={[0, 10]} tickCount={11} tick={false} axisLine={false} />
                 <PolarAngleAxis dataKey="subject" tick={(props) => <AxisTick {...props} isMobile={isMobile} />} axisLine={false} tickLine={false} />
-                <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.5} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
+                <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.4} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-8 p-4 bg-white/10 rounded-2xl backdrop-blur-sm">
-            <Image src="/bituach-yashir-logo.png" alt="Logo" width={140} height={50} className="brightness-0 invert" />
+          <div className="mt-10 p-4 lg:p-6 bg-white/5 rounded-3xl backdrop-blur-sm">
+            <Image src="/bituach-yashir-logo.png" alt="Logo" width={120} height={45} className="brightness-0 invert" />
           </div>
         </div>
       </div>
