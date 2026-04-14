@@ -9,6 +9,7 @@ import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
 
+// הגדרות חיבור
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -22,6 +23,9 @@ const sections = [
   "עבודת צוות",
 ];
 
+/* -------------------------------------------------
+   עיצוב המפה
+------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
     <label className="text-xl font-bold text-blue-950 block">{skill}</label>
@@ -109,31 +113,31 @@ export default function Home() {
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // 2. שליחה למייל - המנגנון המרכזי שקובע הצלחה מבחינת המשתמש
+      // 2. שליחה למייל - המנגנון המרכזי שחייב לעבוד
       const mailResponse = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, skills, chartPngBase64: png }),
       });
 
-      // 3. ניסיון שמירה ל-Database (עטוף כך שלא יכשיל את כל השליחה)
-      supabase.from('survey_results').insert([
-        { 
+      // 3. ניסיון שמירה ל-Database (עטוף בשקט מוחלט)
+      try {
+        supabase.from('survey_results').insert([{ 
           full_name: name, email: email, 
           cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
           cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
           cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]],
           cat7_innovation: 0, cat8_partnership: 0
-        }
-      ]).then(({ error }) => { if (error) console.error("Database Silent Error:", error); });
+        }]).then(() => console.log("DB Attempt Finished"));
+      } catch (e) { /* התעלמות משגיאה */ }
 
-      // אם המייל נשלח (או אפילו אם סתם קיבלנו תשובה מהשרת), אנחנו מראים הצלחה
+      // הצלחה תלויה אך ורק בתגובה מהשרת של המיילים
       if (mailResponse.ok) {
         setStatus("success");
         setName(""); setEmail("");
         setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
       } else {
-        throw new Error("Mail error");
+        throw new Error("Mail Error");
       }
 
     } catch (error) { 
@@ -161,9 +165,11 @@ export default function Home() {
           <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition disabled:bg-gray-400">
             {isSubmitting ? "מייצר מפה..." : "שלחו לי את המפה !"}
           </button>
+          
           {status === "success" && (
             <p className="text-green-600 text-center mt-6 font-black text-xl">✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.</p>
           )}
+          
           {status === "error" && (
             <p className="text-red-600 text-center mt-6 font-bold underline">הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.</p>
           )}
