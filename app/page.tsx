@@ -38,7 +38,7 @@ export default function Home() {
         cat1_leadership: skills[sections[0]], 
         cat2_soul_player: skills[sections[1]], 
         mutual_guarantee: skills[sections[2]], // זה השם שסידרנו ב-SQL
-        cat4_professional: skills[sections[3]], 
+        cat4_professionalism: skills[sections[3]], 
         cat5_business_co: skills[sections[4]], 
         cat6_curiosity: skills[sections[5]]
       }]);
