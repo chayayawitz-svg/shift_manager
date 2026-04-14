@@ -9,6 +9,7 @@ import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
 
+// חיבור לסופבייס
 const supabase = createClient('https://rbyufhkwrgvywnovdwei.supabase.co', 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u');
 
 const sections = [
@@ -21,7 +22,7 @@ const sections = [
 ];
 
 /* -------------------------------------------------
-   רכיבי עיצוב יוקרתיים
+   רכיבי עיצוב יוקרתיים (שחזור המראה המקורי)
 ------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
@@ -97,44 +98,50 @@ export default function Home() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name || !email || !sections.every(s => skills[s] > 0)) {
-      alert("נא למלא פרטים ולדרג את כל המיומנויות"); return;
+      alert("נא למלא פרטים ולדרג הכל"); return;
     }
 
     setIsSubmitting(true);
     setStatus(null);
 
     try {
-      // 1. צילום מפה
+      // 1. צילום המפה עם הגדרות ביצועים
       let png = "";
       if (chartRef.current) {
-        const canvas = await html2canvas(chartRef.current, { scale: 2, useCORS: true, backgroundColor: "#020414" });
-        png = canvas.toDataURL("image/png", 0.8).split(",")[1];
+        const canvas = await html2canvas(chartRef.current, { 
+          scale: 1.5, // טיפה פחות מ-2 כדי להוריד עומס מהמייל
+          useCORS: true, 
+          backgroundColor: "#020414",
+          logging: false 
+        });
+        png = canvas.toDataURL("image/png", 0.7).split(",")[1];
       }
 
-      // 2. שמירה לסופבייס (רק 6 קטגוריות)
-      const { error: dbError } = await supabase.from('survey_results').insert([{ 
+      // 2. שמירה לסופבייס (רק 6 עמודות)
+      const dbPromise = supabase.from('survey_results').insert([{ 
         full_name: name, email: email, 
         cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
         cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
         cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]]
       }]);
-      if (dbError) throw dbError;
 
       // 3. שליחה למייל
-      const mailResponse = await fetch("/api/send-survey-results", {
+      const mailPromise = fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, skills, chartPngBase64: png }),
       });
 
+      // מריצים את שניהם ומחכים לתשובה מהמייל
+      const [dbResult, mailResponse] = await Promise.all([dbPromise, mailPromise]);
+
       if (mailResponse.ok) {
         setStatus("success");
-        // לא מאפסים נתונים - הכל נשאר לפנייך!
       } else {
-        throw new Error("Mail failed");
+        throw new Error("Mail submission failed");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Critical Error:", error);
       setStatus("error");
     } finally {
       setIsSubmitting(false);
@@ -145,7 +152,7 @@ export default function Home() {
     <div className="min-h-screen p-4 bg-[#020414] text-right" dir="rtl">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
         
-        {/* טופס */}
+        {/* טופס הדירוג */}
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full border-t-8 border-[#FF3366]">
           <h1 className="text-3xl font-black text-blue-900 mb-2 text-center">מודל הבאלנס</h1>
           <p className="text-blue-600 text-center mb-8 font-bold text-xl italic">קורס מנהלי משמרת</p>
@@ -162,20 +169,22 @@ export default function Home() {
           </div>
 
           <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition disabled:bg-gray-400">
-            {isSubmitting ? "מייצר מפה ושולח..." : "שלחו לי את המפה !"}
+            {isSubmitting ? "שולח נתונים..." : "שלחו לי את המפה !"}
           </button>
           
           {status === "success" && (
             <p className="text-green-600 text-center mt-6 font-black text-xl animate-pulse">
-              ✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.
+              ✓ המפה נשלחה! התוצאות נשמרו עבורך כאן.
             </p>
           )}
           {status === "error" && (
-            <p className="text-red-600 text-center mt-6 font-bold underline">הייתה שגיאה בשליחה. נסי שוב.</p>
+            <div className="mt-6 p-4 bg-red-50 border-r-4 border-red-500 text-red-700 font-bold">
+              הייתה שגיאה טכנית. בדקי שכל הכוכבים סומנו או נסי שוב בעוד דקה.
+            </div>
           )}
         </form>
 
-        {/* מפה */}
+        {/* המפה הוויזואלית */}
         <div ref={chartRef} className="flex-1 bg-gradient-to-br from-[#3b002a] via-[#050824] to-[#020414] rounded-[40px] p-4 lg:p-12 flex flex-col items-center justify-center shadow-2xl min-h-[600px] lg:min-h-[700px] border-2 border-white/10 w-full overflow-hidden relative">
           
           <div className="bg-[#FF3366] px-10 py-3 rounded-full shadow-2xl mb-10 transform -rotate-1 border-2 border-white/20">
