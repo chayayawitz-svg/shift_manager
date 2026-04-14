@@ -21,7 +21,7 @@ const sections = [
 ];
 
 /* -------------------------------------------------
-   רכיבי עיצוב יוקרתיים
+   רכיבי עיצוב יוקרתיים (שחזור המראה המקורי)
 ------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
@@ -105,21 +105,31 @@ export default function Home() {
     setStatus(null);
 
     try {
+      // 1. צילום המפה
       let png = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, { scale: 2, useCORS: true, backgroundColor: "#020414" });
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // שמירה ל-Supabase
+      // 2. שמירה ל-Supabase (רק 6 קטגוריות - בדיוק כמו ב-SQL החדש)
       const { error: dbError } = await supabase.from('survey_results').insert([{ 
-        full_name: name, email: email, 
-        cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
-        cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
-        cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]]
+        full_name: name, 
+        email: email, 
+        cat1_leadership: skills[sections[0]], 
+        cat2_soul_player: skills[sections[1]], 
+        cat3_mutual_guarantee: skills[sections[2]], 
+        cat4_professionalism: skills[sections[3]], 
+        cat5_business_connection: skills[sections[4]], 
+        cat6_curiosity: skills[sections[5]]
       }]);
 
-      // שליחה למייל
+      if (dbError) {
+        console.error("DB Error:", dbError.message);
+        throw dbError;
+      }
+
+      // 3. שליחה למייל
       const mailResponse = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,11 +138,14 @@ export default function Home() {
 
       if (mailResponse.ok) {
         setStatus("success");
-        // שימי לב: הסרתי את איפוס השדות (setName, setSkills) כדי שהכל יישאר על המסך
+        // שימי לב: הסרתי את איפוס השדות כדי שהמפה תישאר לפנייך!
       } else {
+        const mailErr = await mailResponse.json();
+        console.error("Mail Error:", mailErr);
         throw new Error("Mail failed");
       }
     } catch (error) {
+      console.error("Submission Error:", error);
       setStatus("error");
     } finally {
       setIsSubmitting(false);
@@ -143,7 +156,7 @@ export default function Home() {
     <div className="min-h-screen p-4 bg-[#020414] text-right" dir="rtl">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
         
-        {/* טופס הדירוג */}
+        {/* טופס */}
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full border-t-8 border-[#FF3366]">
           <h1 className="text-3xl font-black text-blue-900 mb-2 text-center">מודל הבאלנס</h1>
           <p className="text-blue-600 text-center mb-8 font-bold text-xl italic">קורס מנהלי משמרת</p>
@@ -164,7 +177,7 @@ export default function Home() {
           </button>
           
           {status === "success" && (
-            <p className="text-green-600 text-center mt-6 font-black text-xl animate-bounce">
+            <p className="text-green-600 text-center mt-6 font-black text-xl animate-pulse">
               ✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.
             </p>
           )}
@@ -173,10 +186,9 @@ export default function Home() {
           )}
         </form>
 
-        {/* תצוגת המפה הוויזואלית */}
+        {/* מפה */}
         <div ref={chartRef} className="flex-1 bg-gradient-to-br from-[#3b002a] via-[#050824] to-[#020414] rounded-[40px] p-4 lg:p-12 flex flex-col items-center justify-center shadow-2xl min-h-[600px] lg:min-h-[700px] border-2 border-white/10 w-full overflow-hidden relative">
           
-          {/* הטאצ' האישי - כותרת דינמית */}
           <div className="bg-[#FF3366] px-10 py-3 rounded-full shadow-2xl mb-10 transform -rotate-1 border-2 border-white/20">
             <h2 className="text-2xl lg:text-3xl font-black text-white">
               {name ? `המפה של ${name}` : "המפה האישית שלך"}
@@ -187,18 +199,9 @@ export default function Home() {
             <ResponsiveContainer width="100%" height={isMobile ? 450 : 550}>
               <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? 100 : 180} data={chartData}>
                 <PolarGrid gridType="circle" stroke="#4B5563" strokeDasharray="3 3" />
-                {/* 10 עיגולי רשת פנימיים */}
                 <PolarRadiusAxis domain={[0, 10]} tickCount={11} tick={false} axisLine={false} />
                 <PolarAngleAxis dataKey="subject" tick={(props) => <AxisTick {...props} isMobile={isMobile} />} axisLine={false} />
-                <Radar 
-                   dataKey="value" 
-                   stroke="#FF3366" 
-                   fill="#FF3366" 
-                   fillOpacity={0.4} 
-                   strokeWidth={4} 
-                   dot={<DotWithValue />} 
-                   isAnimationActive={false} 
-                />
+                <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.4} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
