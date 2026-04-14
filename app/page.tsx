@@ -36,7 +36,6 @@ const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
   const nx = d > 0 ? dx / d : 0; const ny = d > 0 ? dy / d : 0;
   const offset = isMobile ? 30 : 45; 
   const newX = x + nx * offset; const newY = y + ny * offset;
-
   let lines: string[] = [];
   const words = payload.value.split(" ");
   let current = "";
@@ -45,7 +44,6 @@ const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
     else { current += (current ? " " : "") + w; }
   });
   if (current) lines.push(current);
-
   return (
     <text x={newX} y={newY} textAnchor="middle" fill="#fff" fontSize={isMobile ? 9 : 10} fontWeight={700}>
       {lines.map((line, i) => (
@@ -61,7 +59,7 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   const [skills, setSkills] = useState<Record<string, number>>(Object.fromEntries(sections.map(s => [s, 0])));
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,57 +77,59 @@ export default function Home() {
     setIsSubmitting(true); setStatus(null);
 
     try {
-      // 1. צילום מפה בפורמט JPEG קל (קריטי למניעת שגיאה 500)
+      // 1. צילום מפה
       let jpgBase64 = "";
       if (chartRef.current) {
-        const canvas = await html2canvas(chartRef.current, { 
-          scale: 1, 
-          useCORS: true, 
-          backgroundColor: "#020414" 
-        });
+        const canvas = await html2canvas(chartRef.current, { scale: 1, useCORS: true, backgroundColor: "#020414" });
         jpgBase64 = canvas.toDataURL("image/jpeg", 0.6).split(",")[1];
       }
 
-    // שמירה לסופבייס - עם השמות המדויקים מהצילום מסך שלך!
-const { error: dbError } = await supabase.from('survey_results').insert([{ 
-  full_name: name, 
-  email: email, 
-  cat1_leadership: skills[sections[0]], 
-  cat2_soul_player: skills[sections[1]], 
-  cat3_mutual_guar: skills[sections[2]], // שם מעודכן
-  cat4_professional: skills[sections[3]], // שם מעודכן
-  cat5_business_co: skills[sections[4]], // שם מעודכן
-  cat6_curiosity: skills[sections[5]]
-}]);
-      if (dbError) console.warn("Supabase Warning:", dbError.message);
+      // 2. שמירה לסופבייס - בדיקה קפדנית
+      const { error: dbError } = await supabase.from('survey_results').insert([{ 
+        full_name: name, email: email, 
+        cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
+        cat3_mutual_guar: skills[sections[2]], 
+        cat4_professional: skills[sections[3]], 
+        cat5_business_co: skills[sections[4]], 
+        cat6_curiosity: skills[sections[5]]
+      }]);
 
-      // 3. שליחה למייל
+      if (dbError) {
+        console.error("DB Error:", dbError.message);
+        throw new Error(`שגיאה בבסיס הנתונים: ${dbError.message}`);
+      }
+
+      // 3. שליחה למייל - בדיקת תגובת השרת
       const mailRes = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, skills, chartPngBase64: jpgBase64 }),
       });
 
-      if (mailRes.ok) setStatus("success");
-      else throw new Error("Mail submission error");
+      if (!mailRes.ok) {
+        const errorData = await mailRes.json();
+        throw new Error(`שגיאה בשליחת המייל: ${errorData.error || "שרת המייל לא הגיב"}`);
+      }
 
-    } catch (err) { setStatus("error"); }
-    setIsSubmitting(false);
+      setStatus("success");
+    } catch (err: any) {
+      console.error(err);
+      setStatus(err.message || "שגיאה כללית במערכת");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen p-4 bg-[#020414] text-right font-sans" dir="rtl">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
-        
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full border-t-8 border-[#FF3366]">
           <h1 className="text-3xl font-black text-blue-900 mb-2 text-center">מודל הבאלנס</h1>
           <p className="text-blue-600 text-center mb-8 font-bold italic underline">קורס מנהלי משמרת</p>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
             <input placeholder="שם מלא" className="w-full border-b-4 p-4 text-xl font-bold" value={name} onChange={e => setName(e.target.value)} required />
             <input placeholder="אימייל" className="w-full border-b-4 p-4 text-xl font-bold text-left" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
-
           <div className="space-y-10 max-h-[500px] overflow-y-auto pl-4 custom-scrollbar">
             {sections.map(s => (
               <div key={s} className="border-b border-gray-100 pb-6 text-right">
@@ -145,13 +145,11 @@ const { error: dbError } = await supabase.from('survey_results').insert([{
               </div>
             ))}
           </div>
-
           <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition">
             {isSubmitting ? "שולח נתונים..." : "שלחו לי את המפה !"}
           </button>
-          
-          {status === "success" && <p className="text-green-600 text-center mt-6 font-black text-xl animate-pulse">✓ המפה נשלחה בהצלחה! התוצאות נשארו לפנייך.</p>}
-          {status === "error" && <p className="text-red-600 text-center mt-6 font-bold underline">שגיאה בשליחה. נסי שוב בעוד רגע.</p>}
+          {status === "success" && <p className="text-green-600 text-center mt-6 font-black text-xl animate-pulse">✓ המפה נשלחה בהצלחה!</p>}
+          {status && status !== "success" && <div className="mt-6 p-4 bg-red-50 border-r-4 border-red-500 text-red-700 font-bold text-center">{status}</div>}
         </form>
 
         <div ref={chartRef} className="flex-1 bg-gradient-to-br from-[#3b002a] via-[#050824] to-[#020414] rounded-[40px] p-12 flex flex-col items-center justify-center shadow-2xl min-h-[700px] border-2 border-white/10 relative">
