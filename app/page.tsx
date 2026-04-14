@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, FormEvent, useEffect } from "react";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import {
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
+} from "recharts";
 import Image from "next/image";
 import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
@@ -46,7 +48,7 @@ export default function Home() {
     setIsSubmitting(true); setStatus(null);
 
     try {
-      // צילום מפה - עם ניקוי צבעים בעייתיים (הפתרון ל-oklab)
+      // 1. צילום מפה - ניקוי שגיאות oklab בזמן אמת
       let jpgBase64 = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, { 
@@ -54,47 +56,38 @@ export default function Home() {
           useCORS: true, 
           backgroundColor: "#020414",
           onclone: (clonedDoc) => {
-            // טריק ה-onclone: אנחנו מוצאים את האלמנט המשוכפל ומכריחים אותו להשתמש רק בצבעים פשוטים
-            const element = clonedDoc.querySelector('[data-chart-container]') as HTMLElement;
-            if (element) {
-              element.style.background = "#020414";
-              element.style.backgroundImage = "none";
-              // מנקים כל זכר לצבעי oklab/oklch ש-Tailwind עלול להכניס
-              const allItems = element.querySelectorAll('*');
-              allItems.forEach((el: any) => {
-                if (el.style) el.style.colorInterpolationFilters = "sRGB";
-              });
+            const el = clonedDoc.querySelector('[data-chart-box]') as HTMLElement;
+            if (el) {
+              el.style.background = "#020414"; // מכריח צבע בסיסי שהמצלמה מבינה
+              el.style.backgroundImage = "none";
             }
           }
         });
-        jpgBase64 = canvas.toDataURL("image/jpeg", 0.5).split(",")[1];
+        jpgBase64 = canvas.toDataURL("image/jpeg", 0.6).split(",")[1];
       }
 
-      // שמירה לסופבייס - שמות העמודות המדויקים שלך
+      // 2. שמירה לסופבייס - מיפוי שמות עמודות לפי image_63d209.png
       const { error: dbError } = await supabase.from('survey_results').insert([{ 
         full_name: name, 
         email: email, 
         cat1_leadership: skills[sections[0]], 
         cat2_soul_player: skills[sections[1]], 
-        cat3_mutual_guar: skills[sections[2]], 
+       cat3_mutual_guarantee: skills[sections[2]], // השם המלא מהצילום מסך!
         cat4_professional: skills[sections[3]], 
-        cat5_business_co: skills[sections[4]], 
+        cat5_business_connection: skills[sections[4]], 
         cat6_curiosity: skills[sections[5]]
       }]);
 
-      if (dbError) throw new Error(`שגיאה בבסיס הנתונים: ${dbError.message}`);
+      if (dbError) throw new Error(`דאטה-בייס: ${dbError.message}`);
 
-      // שליחה למייל
+      // 3. שליחה למייל
       const mailRes = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, skills, chartPngBase64: jpgBase64 }),
       });
 
-      if (!mailRes.ok) {
-        const errJson = await mailRes.json();
-        throw new Error(errJson.error || "שגיאה בשליחת המייל");
-      }
+      if (!mailRes.ok) throw new Error("שגיאה בשליחת המייל");
 
       setStatus("success");
     } catch (err: any) {
@@ -142,26 +135,20 @@ export default function Home() {
           {status && status !== "success" && <div className="mt-6 p-4 bg-red-50 border-r-4 border-red-500 text-red-700 font-bold text-center">{status}</div>}
         </form>
 
-        {/* הוספתי data-chart-container כדי שה-onclone יזהה אותו בקלות */}
-        <div ref={chartRef} data-chart-container className="flex-1 bg-[#020414] rounded-[40px] p-12 flex flex-col items-center justify-center shadow-2xl min-h-[700px] border-2 border-white/10 relative overflow-hidden">
-          
+        <div ref={chartRef} data-chart-box className="flex-1 bg-[#020414] rounded-[40px] p-12 flex flex-col items-center justify-center shadow-2xl min-h-[700px] border-2 border-white/10 relative overflow-hidden">
           <div className="bg-[#FF3366] px-10 py-3 rounded-full mb-10 shadow-lg">
             <h2 className="text-2xl lg:text-3xl font-black text-white">{name ? `המפה של ${name}` : "המפה האישית שלך"}</h2>
           </div>
-
-          <div className="w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={500}>
-              <RadarChart cx="50%" cy="50%" outerRadius={180} data={sections.map(s => ({ subject: s, value: skills[s] }))}>
-                <PolarGrid gridType="circle" stroke="#4B5563" strokeDasharray="3 3" />
-                <PolarRadiusAxis domain={[0, 10]} tickCount={11} tick={false} axisLine={false} />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: 'white', fontSize: 10, fontWeight: 700 }} axisLine={false} />
-                <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.4} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="mt-10 opacity-80">
-            <Image src="/bituach-yashir-logo.png" alt="Logo" width={140} height={50} className="brightness-0 invert" />
+          <ResponsiveContainer width="100%" height={500}>
+            <RadarChart cx="50%" cy="50%" outerRadius={180} data={sections.map(s => ({ subject: s, value: skills[s] }))}>
+              <PolarGrid gridType="circle" stroke="#4B5563" strokeDasharray="3 3" />
+              <PolarRadiusAxis domain={[0, 10]} tickCount={11} tick={false} axisLine={false} />
+              <PolarAngleAxis dataKey="subject" tick={{ fill: 'white', fontSize: 10, fontWeight: 700 }} axisLine={false} />
+              <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.4} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
+            </RadarChart>
+          </ResponsiveContainer>
+          <div className="mt-10 opacity-80 text-center">
+             <div className="text-white font-bold text-xl">ביטוח ישיר</div>
           </div>
         </div>
       </div>
