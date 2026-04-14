@@ -41,21 +41,33 @@ export default function Home() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name || !email || !sections.every(s => skills[s] > 0)) {
-      alert("נא למלא פרטים ולדרג הכל"); return;
+      alert("נא למלא פרטים ולדרג את כל המיומנויות"); return;
     }
     setIsSubmitting(true); setStatus(null);
 
     try {
-      // צילום מפה - הגדרה חסינת שגיאות צבע
+      // צילום מפה - עם ניקוי צבעים בעייתיים (הפתרון ל-oklab)
       let jpgBase64 = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, { 
           scale: 1, 
           useCORS: true, 
-          backgroundColor: "#020414", // צבע רקע יציב לצילום
-          logging: false 
+          backgroundColor: "#020414",
+          onclone: (clonedDoc) => {
+            // טריק ה-onclone: אנחנו מוצאים את האלמנט המשוכפל ומכריחים אותו להשתמש רק בצבעים פשוטים
+            const element = clonedDoc.querySelector('[data-chart-container]') as HTMLElement;
+            if (element) {
+              element.style.background = "#020414";
+              element.style.backgroundImage = "none";
+              // מנקים כל זכר לצבעי oklab/oklch ש-Tailwind עלול להכניס
+              const allItems = element.querySelectorAll('*');
+              allItems.forEach((el: any) => {
+                if (el.style) el.style.colorInterpolationFilters = "sRGB";
+              });
+            }
+          }
         });
-        jpgBase64 = canvas.toDataURL("image/jpeg", 0.6).split(",")[1];
+        jpgBase64 = canvas.toDataURL("image/jpeg", 0.5).split(",")[1];
       }
 
       // שמירה לסופבייס - שמות העמודות המדויקים שלך
@@ -79,10 +91,14 @@ export default function Home() {
         body: JSON.stringify({ name, email, skills, chartPngBase64: jpgBase64 }),
       });
 
-      if (!mailRes.ok) throw new Error("שגיאה בשליחת המייל");
+      if (!mailRes.ok) {
+        const errJson = await mailRes.json();
+        throw new Error(errJson.error || "שגיאה בשליחת המייל");
+      }
 
       setStatus("success");
     } catch (err: any) {
+      console.error(err);
       setStatus(err.message);
     } finally {
       setIsSubmitting(false);
@@ -93,7 +109,6 @@ export default function Home() {
     <div className="min-h-screen p-4 bg-[#020414] text-right font-sans" dir="rtl">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
         
-        {/* טופס הדירוג */}
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full border-t-8 border-[#FF3366]">
           <h1 className="text-3xl font-black text-blue-900 mb-2 text-center">מודל הבאלנס</h1>
           <p className="text-blue-600 text-center mb-8 font-bold italic underline">קורס מנהלי משמרת</p>
@@ -127,8 +142,8 @@ export default function Home() {
           {status && status !== "success" && <div className="mt-6 p-4 bg-red-50 border-r-4 border-red-500 text-red-700 font-bold text-center">{status}</div>}
         </form>
 
-        {/* המפה - שינוי רקע למניעת שגיאת oklab */}
-        <div ref={chartRef} style={{ backgroundColor: '#020414' }} className="flex-1 rounded-[40px] p-12 flex flex-col items-center justify-center shadow-2xl min-h-[700px] border-2 border-white/10 relative overflow-hidden">
+        {/* הוספתי data-chart-container כדי שה-onclone יזהה אותו בקלות */}
+        <div ref={chartRef} data-chart-container className="flex-1 bg-[#020414] rounded-[40px] p-12 flex flex-col items-center justify-center shadow-2xl min-h-[700px] border-2 border-white/10 relative overflow-hidden">
           
           <div className="bg-[#FF3366] px-10 py-3 rounded-full mb-10 shadow-lg">
             <h2 className="text-2xl lg:text-3xl font-black text-white">{name ? `המפה של ${name}` : "המפה האישית שלך"}</h2>
