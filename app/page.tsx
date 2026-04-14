@@ -22,9 +22,6 @@ const sections = [
   "עבודת צוות",
 ];
 
-/* -------------------------------------------------
-   רכיבי עיצוב (שחזור 10 עיגולים ומראה עדין)
-------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
     <label className="text-xl font-bold text-blue-950 block">{skill}</label>
@@ -109,15 +106,16 @@ export default function Home() {
     setStatus(null);
 
     try {
+      // 1. צילום המפה
       let png = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, { scale: 2, useCORS: true, backgroundColor: "#020414" });
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // שמירה ל-Database
+      // 2. ניסיון שמירה ל-Supabase - עם "הגנה" שלא תפיל את כל התהליך
       try {
-        await supabase.from('survey_results').insert([
+        const { error } = await supabase.from('survey_results').insert([
           { 
             full_name: name, email: email, 
             cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
@@ -126,9 +124,12 @@ export default function Home() {
             cat7_innovation: 0, cat8_partnership: 0
           }
         ]);
-      } catch (dbErr) { console.warn("DB skip", dbErr); }
+        if (error) console.warn("Supabase check: Permissions issue, but moving to email...");
+      } catch (e) {
+        console.warn("DB skip", e);
+      }
 
-      // שליחה למייל
+      // 3. שליחה למייל - המנגנון הכי חשוב לנו
       const response = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -137,15 +138,15 @@ export default function Home() {
       
       if (response.ok) {
         setStatus("success");
-        // האיפוס יקרה רק אחרי הצלחה
+        // האיפוס קורה רק אחרי הצלחה במייל
         setName(""); setEmail("");
         setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
       } else {
-        throw new Error("Email failed");
+        throw new Error("API call failed");
       }
 
     } catch (error) { 
-      console.error(error);
+      console.error("Submission failed:", error);
       setStatus("error"); 
     }
     setIsSubmitting(false);
@@ -154,7 +155,6 @@ export default function Home() {
   return (
     <div className="min-h-screen p-4 bg-[#020414] text-right" dir="rtl">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
-        
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full">
           <h1 className="text-3xl font-black text-blue-900 mb-8 text-center">מודל הבאלנס <span className="text-[#FF3366]">|</span> קורס מנהלי משמרת</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
@@ -170,7 +170,6 @@ export default function Home() {
             {isSubmitting ? "מייצר מפה..." : "שלחו לי את המפה !"}
           </button>
           
-          {/* הודעת הצלחה ירוקה - בדיוק כמו שרצית */}
           {status === "success" && (
             <p className="text-green-600 text-center mt-6 font-black text-xl">
               ✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.
