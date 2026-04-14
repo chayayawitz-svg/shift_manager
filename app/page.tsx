@@ -21,7 +21,7 @@ const sections = [
 ];
 
 /* -------------------------------------------------
-   רכיבי עיצוב יוקרתיים (שחזור המראה המקורי)
+   רכיבי עיצוב יוקרתיים
 ------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
@@ -97,37 +97,28 @@ export default function Home() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name || !email || !sections.every(s => skills[s] > 0)) {
-      alert("נא למלא שם, אימייל ולדרג את כל המיומנויות");
-      return;
+      alert("נא למלא פרטים ולדרג את כל המיומנויות"); return;
     }
 
     setIsSubmitting(true);
     setStatus(null);
 
     try {
-      // 1. צילום המפה
+      // 1. צילום מפה
       let png = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, { scale: 2, useCORS: true, backgroundColor: "#020414" });
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // 2. שמירה ל-Supabase (רק 6 קטגוריות - בדיוק כמו ב-SQL החדש)
+      // 2. שמירה לסופבייס (רק 6 קטגוריות)
       const { error: dbError } = await supabase.from('survey_results').insert([{ 
-        full_name: name, 
-        email: email, 
-        cat1_leadership: skills[sections[0]], 
-        cat2_soul_player: skills[sections[1]], 
-        cat3_mutual_guarantee: skills[sections[2]], 
-        cat4_professionalism: skills[sections[3]], 
-        cat5_business_connection: skills[sections[4]], 
-        cat6_curiosity: skills[sections[5]]
+        full_name: name, email: email, 
+        cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
+        cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
+        cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]]
       }]);
-
-      if (dbError) {
-        console.error("DB Error:", dbError.message);
-        throw dbError;
-      }
+      if (dbError) throw dbError;
 
       // 3. שליחה למייל
       const mailResponse = await fetch("/api/send-survey-results", {
@@ -138,14 +129,12 @@ export default function Home() {
 
       if (mailResponse.ok) {
         setStatus("success");
-        // שימי לב: הסרתי את איפוס השדות כדי שהמפה תישאר לפנייך!
+        // לא מאפסים נתונים - הכל נשאר לפנייך!
       } else {
-        const mailErr = await mailResponse.json();
-        console.error("Mail Error:", mailErr);
         throw new Error("Mail failed");
       }
     } catch (error) {
-      console.error("Submission Error:", error);
+      console.error(error);
       setStatus("error");
     } finally {
       setIsSubmitting(false);
