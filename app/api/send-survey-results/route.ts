@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 
-// הגדרה קריטית המאפשרת לשרת לקבל את התמונה בלי לקרוס (שגיאה 500)
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '8mb',
+      sizeLimit: '10mb',
     },
   },
 };
@@ -22,7 +21,7 @@ export async function POST(req: Request) {
     const emailHtml = `<div dir="rtl" style="font-family: Arial; padding: 20px;">
       <h2 style="color: #0028A5;">שלום ${name}, מפת הבאלנס שלך מוכנה!</h2>
       <ul style="padding: 0;">${skillsListHtml}</ul>
-      <p>המפה האישית מצורפת למייל זה כקובץ תמונה.</p>
+      <p>המפה האישית מצורפת למייל זה.</p>
     </div>`;
 
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -33,7 +32,7 @@ export async function POST(req: Request) {
         "api-key": process.env.BREVO_API_KEY!
       },
       body: JSON.stringify({
-        sender: { name: "מודל הבאלנס | ביטוח ישיר", email: "chayayawitz@gmail.com" },
+        sender: { name: "מודל הבאלנס", email: "chayayawitz@gmail.com" },
         to: [{ email }, { email: "haya.y@yashir.co.il" }],
         subject: `מפת הבאלנס של ${name}`,
         htmlContent: emailHtml,
