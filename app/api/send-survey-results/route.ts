@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: { "accept": "application/json", "content-type": "application/json", "api-key": process.env.BREVO_API_KEY! },
       body: JSON.stringify({
-        sender: { name: "מודל הבאלנס", email: "chayayawitz@gmail.com" }, // רק השם יוצג ברוב התיבות
+        sender: { name: "קורס מנהלי משמרת|מודל הבאלנס", email: "chayayawitz@gmail.com" }, // רק השם יוצג ברוב התיבות
         to: [{ email }],
         subject: `היי ${name}, מפת הבאלנס שלך מוכנה!`,
         htmlContent: htmlEmployee,
@@ -101,8 +101,8 @@ export async function POST(req: Request) {
       method: "POST",
       headers: { "accept": "application/json", "content-type": "application/json", "api-key": process.env.BREVO_API_KEY! },
       body: JSON.stringify({
-        sender: { name: "מערכת מודל הבאלנס", email: "chayayawitz@gmail.com" },
-        to: [{ email: "haya.y@yashir.co.il" }],
+        sender: { name: "קורס מנהלי משמרת|מודל הבאלנס", email: "chayayawitz@gmail.com" },
+        to: [{ email: "karin.cohen@yashir.co.il" }],
         subject: `תוצאות סקר: ${name} - מפת באלנס`,
         htmlContent: htmlManager,
         attachment: commonAttachment
