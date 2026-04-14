@@ -9,10 +9,12 @@ import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
 
+// הגדרות חיבור ל-Supabase
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// 6 המיומנויות המעודכנות
 const sections = [
   "התמודדות עם שינויים ומצבי לחץ",
   "הנעה והובלה",
@@ -22,9 +24,6 @@ const sections = [
   "עבודת צוות",
 ];
 
-/* -------------------------------------------------
-   רכיבי עיצוב (10 עיגולים ומראה עדין)
-------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
     <label className="text-xl font-bold text-blue-950 block">{skill}</label>
@@ -59,7 +58,6 @@ const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
   const nx = d > 0 ? dx / d : 0; const ny = d > 0 ? dy / d : 0;
   const offset = isMobile ? 30 : 45; 
   const newX = x + nx * offset; const newY = y + ny * offset;
-
   let lines: string[] = [];
   const words = payload.value.split(" ");
   let current = "";
@@ -68,7 +66,6 @@ const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
     else { current += (current ? " " : "") + w; }
   });
   if (current) lines.push(current);
-
   return (
     <text x={newX} y={newY} textAnchor="middle" fill="#fff" fontSize={isMobile ? 9 : 10} fontWeight={700} style={{fontFamily: 'Rubik'}}>
       {lines.map((line, i) => (
@@ -82,9 +79,7 @@ export default function Home() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isMobile, setIsMobile] = useState(false);
-  const [skills, setSkills] = useState<Record<string, number>>(
-    Object.fromEntries(sections.map((s) => [s, 0]))
-  );
+  const [skills, setSkills] = useState<Record<string, number>>(Object.fromEntries(sections.map((s) => [s, 0])));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<any>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -116,44 +111,36 @@ export default function Home() {
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // 2. שמירה ל-Supabase - שולחים "0" בכוח למקומות הריקים כדי למנוע שגיאה
-      try {
-        const { error } = await supabase.from('survey_results').insert([
-          { 
-            full_name: name, 
-            email: email, 
-            cat1_leadership: skills[sections[0]], 
-            cat2_soul_player: skills[sections[1]], 
-            cat3_mutual_guarantee: skills[sections[2]], 
-            cat4_professionalism: skills[sections[3]], 
-            cat5_business_connection: skills[sections[4]], 
-            cat6_curiosity: skills[sections[5]],
-            cat7_innovation: 0, // שולח 0 במקום ריק
-            cat8_partnership: 0  // שולח 0 במקום ריק
-          }
-        ]);
-        if (error) console.warn("Supabase Warning:", error.message);
-      } catch (e) {
-        console.warn("DB Save skipped");
-      }
+      // 2. שמירה ל-Supabase - עם טיפול בשגיאות שלא חוסם
+      const { error: dbError } = await supabase.from('survey_results').insert([
+        { 
+          full_name: name, email: email, 
+          cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
+          cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
+          cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]],
+          cat7_innovation: 0, cat8_partnership: 0
+        }
+      ]);
 
-      // 3. שליחה למייל - המנגנון המרכזי שקובע הצלחה
-      const response = await fetch("/api/send-survey-results", {
+      if (dbError) console.warn("Supabase check:", dbError.message);
+
+      // 3. שליחה למייל
+      const mailResponse = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, skills, chartPngBase64: png }),
       });
       
-      if (response.ok) {
+      if (mailResponse.ok) {
         setStatus("success");
         setName(""); setEmail("");
         setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
       } else {
-        throw new Error("Mail error");
+        setStatus("error");
       }
 
     } catch (error) { 
-      console.error("Submission error:", error);
+      console.error(error);
       setStatus("error"); 
     } finally {
       setIsSubmitting(false);
@@ -179,15 +166,10 @@ export default function Home() {
           </button>
           
           {status === "success" && (
-            <p className="text-green-600 text-center mt-6 font-black text-xl">
-              ✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.
-            </p>
+            <p className="text-green-600 text-center mt-6 font-black text-xl">✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.</p>
           )}
-          
           {status === "error" && (
-            <p className="text-red-600 text-center mt-6 font-bold underline">
-              הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.
-            </p>
+            <p className="text-red-600 text-center mt-6 font-bold underline">הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.</p>
           )}
         </form>
 
