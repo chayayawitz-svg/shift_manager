@@ -9,6 +9,7 @@ import html2canvas from "html2canvas";
 
 const supabase = createClient('https://rbyufhkwrgvywnovdwei.supabase.co', 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u');
 
+// רשימת ה-6 המדויקת
 const sections = [
   "התמודדות עם שינויים ומצבי לחץ",
   "הנעה והובלה",
@@ -46,30 +47,30 @@ export default function Home() {
     setIsSubmitting(true); setStatus(null);
 
     try {
-      // צילום מפה - JPEG דחוס (קריטי למניעת שגיאה 500)
-      let jpgBase64 = "";
+      let png = "";
       if (chartRef.current) {
-        const canvas = await html2canvas(chartRef.current, { 
-          scale: 1, // גודל מקורי (מספיק למייל)
-          useCORS: true, 
-          backgroundColor: "#020414" 
-        });
-        jpgBase64 = canvas.toDataURL("image/jpeg", 0.5).split(",")[1];
+        const canvas = await html2canvas(chartRef.current, { scale: 2, useCORS: true, backgroundColor: "#020414" });
+        png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // שמירה לסופבייס
-      await supabase.from('survey_results').insert([{ 
-        full_name: name, email: email, 
-        cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
-        cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
-        cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]]
+      // כאן המשתנים נשלחים לסופבייס - רק 6 עמודות, התאמה מלאה לטבלה החדשה
+      const { error: dbError } = await supabase.from('survey_results').insert([{ 
+        full_name: name, 
+        email: email, 
+        cat1_leadership: skills[sections[0]], 
+        cat2_soul_player: skills[sections[1]], 
+        cat3_mutual_guarantee: skills[sections[2]], 
+        cat4_professionalism: skills[sections[3]], 
+        cat5_business_connection: skills[sections[4]], 
+        cat6_curiosity: skills[sections[5]]
       }]);
 
-      // שליחה למייל
+      if (dbError) throw dbError;
+
       const mailRes = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, skills, chartPngBase64: jpgBase64 }),
+        body: JSON.stringify({ name, email, skills, chartPngBase64: png }),
       });
 
       if (mailRes.ok) setStatus("success");
@@ -80,7 +81,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-4 bg-[#020414] text-right font-sans" dir="rtl">
+    <div className="min-h-screen p-4 bg-[#020414] text-right" dir="rtl">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
         
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full border-t-8 border-[#FF3366]">
@@ -108,14 +109,15 @@ export default function Home() {
             ))}
           </div>
 
-          <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition">
-            {isSubmitting ? "מייצר מפה ושולח..." : "שלחו לי את המפה !"}
+          <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl">
+            {isSubmitting ? "שולח נתונים..." : "שלחו לי את המפה !"}
           </button>
           
-          {status === "success" && <p className="text-green-600 text-center mt-6 font-black text-xl">✓ המפה נשלחה בהצלחה! התוצאות נשארו לפנייך.</p>}
-          {status === "error" && <p className="text-red-600 text-center mt-6 font-bold underline">שגיאה בשליחה. נסי שוב בעוד רגע.</p>}
+          {status === "success" && <p className="text-green-600 text-center mt-6 font-black text-xl animate-pulse">✓ נשלח בהצלחה! התוצאות נשארות לפנייך.</p>}
+          {status === "error" && <p className="text-red-600 text-center mt-6 font-bold underline">שגיאה בשליחה. נסי שוב.</p>}
         </form>
 
+        {/* המפה היוקרתית */}
         <div ref={chartRef} className="flex-1 bg-gradient-to-br from-[#3b002a] via-[#050824] to-[#020414] rounded-[40px] p-12 flex flex-col items-center justify-center shadow-2xl min-h-[700px] border-2 border-white/10 relative">
           <div className="bg-[#FF3366] px-10 py-3 rounded-full mb-10 shadow-lg">
             <h2 className="text-2xl lg:text-3xl font-black text-white">{name ? `המפה של ${name}` : "המפה האישית שלך"}</h2>
@@ -128,7 +130,7 @@ export default function Home() {
               <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.4} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
             </RadarChart>
           </ResponsiveContainer>
-          <div className="mt-10 opacity-80">
+          <div className="mt-10">
             <Image src="/bituach-yashir-logo.png" alt="Logo" width={140} height={50} className="brightness-0 invert" />
           </div>
         </div>
