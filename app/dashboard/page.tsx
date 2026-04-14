@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
+// התחברות ל-Supabase שלך
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -75,17 +76,21 @@ export default function DashboardPage() {
             {/* גרף עוגה מסכם */}
             <div className="bg-white p-8 rounded-2xl shadow-xl mb-10">
               <h2 className="text-2xl font-bold mb-4 text-blue-900">התפלגות חוזקות צוותית (ממוצע)</h2>
-              <div className="h-[400px] w-full">
+              <div className="h-[500px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
+                      // הגדרת תווית חיצונית
                       label={({ name, value }) => `${name}: ${value}`}
-                      outerRadius={130}
-                      fill="#8884d8"
+                      // הוספת קו מחבר בין העוגה לתווית
+                      labelLine={{ stroke: '#4b5563', strokeWidth: 1 }}
+                      // הקטנת הרדיוס כדי לפנות מקום לתוויות בחוץ
+                      outerRadius={120}
+                      innerRadius={60} // הפכנו את זה לגרף דונאט למראה מודרני יותר
+                      paddingAngle={5}
                       dataKey="value"
                     >
                       {pieData.map((entry, index) => (
@@ -99,13 +104,13 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* הטבלה המקורית שלך */}
+            {/* הטבלה המלאה */}
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                <div className="bg-[#0b1a40] text-white p-4 font-bold text-xl">פירוט תשובות מלא</div>
                <div className="overflow-x-auto">
-                <table className="w-full text-right">
+                <table className="w-full text-right border-collapse">
                   <thead>
-                    <tr className="bg-gray-100 text-blue-900">
+                    <tr className="bg-gray-100 text-blue-900 border-b">
                       <th className="p-4">תאריך</th>
                       <th className="p-4">שם מלא</th>
                       <th className="p-4">הובלה</th>
@@ -120,8 +125,8 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {results.map((row) => (
-                      <tr key={row.id} className="border-b hover:bg-gray-50">
-                        <td className="p-4 text-sm">{new Date(row.created_at).toLocaleDateString('he-IL')}</td>
+                      <tr key={row.id} className="border-b hover:bg-gray-50 transition-colors">
+                        <td className="p-4 text-sm text-gray-600">{new Date(row.created_at).toLocaleDateString('he-IL')}</td>
                         <td className="p-4 font-bold">{row.full_name}</td>
                         <td className="p-4">{row.cat1_leadership}</td>
                         <td className="p-4">{row.cat2_soul_player}</td>
