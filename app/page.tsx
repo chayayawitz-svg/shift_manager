@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useRef, FormEvent, useEffect } from "react";
-import {
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
-} from "recharts";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 import Image from "next/image";
 import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
@@ -48,7 +46,7 @@ export default function Home() {
     setIsSubmitting(true); setStatus(null);
 
     try {
-      // 1. צילום מפה - ניקוי שגיאות oklab בזמן אמת
+      // 1. צילום מפה - עם ניקוי צבעים בעייתיים כדי למנוע את שגיאת ה-oklab
       let jpgBase64 = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, { 
@@ -56,9 +54,10 @@ export default function Home() {
           useCORS: true, 
           backgroundColor: "#020414",
           onclone: (clonedDoc) => {
-            const el = clonedDoc.querySelector('[data-chart-box]') as HTMLElement;
+            const el = clonedDoc.querySelector('[data-chart-container]') as HTMLElement;
             if (el) {
-              el.style.background = "#020414"; // מכריח צבע בסיסי שהמצלמה מבינה
+              // מכריחים את הצבעים להיות פשוטים רק לצורך הצילום
+              el.style.background = "#020414";
               el.style.backgroundImage = "none";
             }
           }
@@ -66,19 +65,19 @@ export default function Home() {
         jpgBase64 = canvas.toDataURL("image/jpeg", 0.6).split(",")[1];
       }
 
-      // 2. שמירה לסופבייס - מיפוי שמות עמודות לפי image_63d209.png
+      // 2. שמירה לסופבייס - התאמה מושלמת לשמות ב-Table Editor שלך!
       const { error: dbError } = await supabase.from('survey_results').insert([{ 
         full_name: name, 
         email: email, 
         cat1_leadership: skills[sections[0]], 
         cat2_soul_player: skills[sections[1]], 
-       cat3_mutual_guarantee: skills[sections[2]], // השם המלא מהצילום מסך!
+        mutual_guarantee: skills[sections[2]], // השם המלא שסידרנו ב-SQL
         cat4_professional: skills[sections[3]], 
-        cat5_business_connection: skills[sections[4]], 
+        cat5_business_co: skills[sections[4]], 
         cat6_curiosity: skills[sections[5]]
       }]);
 
-      if (dbError) throw new Error(`דאטה-בייס: ${dbError.message}`);
+      if (dbError) throw new Error(`סופבייס: ${dbError.message}`);
 
       // 3. שליחה למייל
       const mailRes = await fetch("/api/send-survey-results", {
@@ -101,16 +100,13 @@ export default function Home() {
   return (
     <div className="min-h-screen p-4 bg-[#020414] text-right font-sans" dir="rtl">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
-        
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full border-t-8 border-[#FF3366]">
           <h1 className="text-3xl font-black text-blue-900 mb-2 text-center">מודל הבאלנס</h1>
           <p className="text-blue-600 text-center mb-8 font-bold italic underline">קורס מנהלי משמרת</p>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            <input placeholder="שם מלא" className="w-full border-b-4 p-4 text-xl font-bold" value={name} onChange={e => setName(e.target.value)} required />
-            <input placeholder="אימייל" className="w-full border-b-4 p-4 text-xl font-bold text-left" value={email} onChange={e => setEmail(e.target.value)} required />
+            <input placeholder="שם מלא" className="w-full border-b-4 p-4 text-xl font-bold outline-none focus:border-[#FF3366]" value={name} onChange={e => setName(e.target.value)} required />
+            <input placeholder="אימייל" className="w-full border-b-4 p-4 text-xl font-bold text-left outline-none focus:border-[#FF3366]" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
-
           <div className="space-y-10 max-h-[500px] overflow-y-auto pl-4 custom-scrollbar">
             {sections.map(s => (
               <div key={s} className="border-b border-gray-100 pb-6 text-right">
@@ -119,23 +115,21 @@ export default function Home() {
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
                     <button key={n} type="button" onClick={() => setSkills(p => ({ ...p, [s]: n }))} className="transition hover:scale-125">
                       <Star className={`w-8 h-8 ${n <= skills[s] ? "fill-[#FF3366] text-[#FF3366]" : "text-gray-200"}`} />
-                      <span className="text-[10px] block font-bold text-gray-500 mt-1">{n}</span>
+                      <span className="text-[10px] block font-bold text-gray-500 mt-1 text-center">{n}</span>
                     </button>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-
           <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition">
-            {isSubmitting ? "שולח נתונים..." : "שלחו לי את המפה !"}
+            {isSubmitting ? "מייצר מפה ושולח..." : "שלחו לי את המפה !"}
           </button>
-          
           {status === "success" && <p className="text-green-600 text-center mt-6 font-black text-xl animate-pulse">✓ המפה נשלחה בהצלחה!</p>}
           {status && status !== "success" && <div className="mt-6 p-4 bg-red-50 border-r-4 border-red-500 text-red-700 font-bold text-center">{status}</div>}
         </form>
 
-        <div ref={chartRef} data-chart-box className="flex-1 bg-[#020414] rounded-[40px] p-12 flex flex-col items-center justify-center shadow-2xl min-h-[700px] border-2 border-white/10 relative overflow-hidden">
+        <div ref={chartRef} data-chart-container className="flex-1 bg-[#020414] rounded-[40px] p-12 flex flex-col items-center justify-center shadow-2xl min-h-[700px] border-2 border-white/10 relative overflow-hidden">
           <div className="bg-[#FF3366] px-10 py-3 rounded-full mb-10 shadow-lg">
             <h2 className="text-2xl lg:text-3xl font-black text-white">{name ? `המפה של ${name}` : "המפה האישית שלך"}</h2>
           </div>
@@ -147,9 +141,7 @@ export default function Home() {
               <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.4} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
             </RadarChart>
           </ResponsiveContainer>
-          <div className="mt-10 opacity-80 text-center">
-             <div className="text-white font-bold text-xl">ביטוח ישיר</div>
-          </div>
+          <div className="mt-10 opacity-80 text-white font-bold text-xl">ביטוח ישיר</div>
         </div>
       </div>
     </div>
