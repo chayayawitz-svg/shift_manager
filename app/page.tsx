@@ -90,13 +90,17 @@ export default function Home() {
         jpgBase64 = canvas.toDataURL("image/jpeg", 0.6).split(",")[1];
       }
 
-      // 2. שמירה לסופבייס (רק 6 קטגוריות)
-      const { error: dbError } = await supabase.from('survey_results').insert([{ 
-        full_name: name, email: email, 
-        cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
-        cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
-        cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]]
-      }]);
+    // שמירה לסופבייס - עם השמות המדויקים מהצילום מסך שלך!
+const { error: dbError } = await supabase.from('survey_results').insert([{ 
+  full_name: name, 
+  email: email, 
+  cat1_leadership: skills[sections[0]], 
+  cat2_soul_player: skills[sections[1]], 
+  cat3_mutual_guar: skills[sections[2]], // שם מעודכן
+  cat4_professional: skills[sections[3]], // שם מעודכן
+  cat5_business_co: skills[sections[4]], // שם מעודכן
+  cat6_curiosity: skills[sections[5]]
+}]);
       if (dbError) console.warn("Supabase Warning:", dbError.message);
 
       // 3. שליחה למייל
