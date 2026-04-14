@@ -11,6 +11,14 @@ import {
 } from "recharts";
 import Image from "next/image";
 import { Star } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+
+/* -------------------------------------------------
+   חיבור אמיתי למסד הנתונים של Supabase שלך
+------------------------------------------------- */
+const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
+const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 /* -------------------------------------------------
    1. לוגיקת פונטים וייצור תמונה (עבור המייל)
@@ -79,13 +87,13 @@ const svgToPng = async (svg: SVGElement, name: string): Promise<string> => {
 };
 
 /* -------------------------------------------------
-   2. סדר המיומנויות החדש (החלפה בין סקרנות לחדשנות)
+   2. סדר המיומנויות החדש
 ------------------------------------------------- */
 const sections = [
   "הובלה והשפעה על התוצאות",
- "שחקני נשמה",
- "ערבות הדדית",
- "מקצועיות",
+  "שחקני נשמה",
+  "ערבות הדדית",
+  "מקצועיות",
   "חיבור לביזנס",
   "סקרנות ולמידה מתמשכת",
   "חדשנות",
@@ -196,9 +204,33 @@ export default function Home() {
     setStatus(null);
 
     try {
+      // 1. ייצור התמונה עבור ה-API שלך
       const svg = chartRef.current?.querySelector("svg");
       const png = svg ? await svgToPng(svg, name) : "";
 
+      // 2. שמירת הנתונים ב-Supabase עבור דשבורד המנהלים
+      const { error: supabaseError } = await supabase
+        .from('survey_results')
+        .insert([
+          { 
+            full_name: name, 
+            email: email, 
+            cat1_leadership: skills["הובלה והשפעה על התוצאות"],
+            cat2_soul_player: skills["שחקני נשמה"],
+            cat3_mutual_guarantee: skills["ערבות הדדית"],
+            cat4_professionalism: skills["מקצועיות"],
+            cat5_business_connection: skills["חיבור לביזנס"],
+            cat6_curiosity: skills["סקרנות ולמידה מתמשכת"],
+            cat7_innovation: skills["חדשנות"],
+            cat8_partnership: skills["ניהול שותפויות"]
+          }
+        ]);
+
+      if (supabaseError) {
+        console.error("שגיאה בשמירה ל-Supabase:", supabaseError);
+      }
+
+      // 3. שליחה ל-API המקורי שלך (כדי שהמייל יישלח למשתתף)
       const response = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -207,7 +239,11 @@ export default function Home() {
       
       if (response.ok) setStatus("success");
       else setStatus("error");
-    } catch { setStatus("error"); }
+
+    } catch (error) { 
+      console.error(error);
+      setStatus("error"); 
+    }
     setIsSubmitting(false);
   };
 
