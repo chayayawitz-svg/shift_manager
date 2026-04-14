@@ -4,12 +4,13 @@ export async function POST(req: Request) {
   try {
     const { name, email, skills, chartPngBase64 } = await req.json();
 
-    const logoUrl = "https://shift-manager-mu-orcin.vercel.app/bituach-yashir-logo.png";
+    // לוגו של ביטוח ישיר בפורמט Base64 - ככה הוא בחיים לא יישבר במייל
+    const logoBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAAA0CAYAAABvHj8ZAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAALySURBVHgB7Z27TsMwFIY7S6S8AAtL78ACZWFh6Ssw8RBMvAITD8HEG7Cw8AIsLAyhS6XShS6VShf6v8SOfY6T2EnstEn7S5Z8jp3Yp8S/49SOHY0vEolEIpFIJBKJRCLK6fX9Y6NoS8fOnf67q7LCHp0vFvbeN6S/Y2eP1K+M6Y8vO0f7pM9jV9S79Xp7GvUu6H86D7vHNo99Y6L7ZezQ89Y9uoc2izY3p/1E2uC87KAsv6vO7eY798W3P690H9f8O+2vYvXUeXvI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S7S6XW9P6D+99hv7HtoM+izYHe+N/ZPeV7vX9S/H/W9NfI82TndO+p3NIn9A9fG8M+Z/qf6vU6v7x8T3S6S/idvGCH9nI6pP5FIJBKJRCIREU7vN6j/987RHunzuFfUu/V6exr1Luh/Og+7xzaPPeu+OQ+956P+f+fF9L9pT/r0702fX8L/Wp/X6eXzI/W9NfI82TndO+p3NIn9/6HhI286X9IHeD+7PZp/6ZzU93Fp/qVzUt/HpfmXzkl9v+570/8D9rvO7mGfm78BfUonK0HjJTkAAAAASUVORK5CYII=";
 
     const skillsListHtml = Object.entries(skills)
       .map(
         ([skill, rating]) => `
-          <li style="background: #f8f9fa; border-right: 4px solid #0028A5; padding: 12px 15px; margin-bottom: 10px; border-radius: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+          <li style="background: #f8f9fa; border-right: 4px solid #0028A5; padding: 12px 15px; margin-bottom: 10px; border-radius: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center; direction: rtl;">
             <span style="font-weight: bold; color: #333; text-align: right; flex: 1; margin-left: 10px;">${skill}</span>
             <span style="background: #0028A5; color: white; padding: 4px 12px; border-radius: 15px; font-size: 14px; white-space: nowrap;">
               ${rating} / 10
@@ -23,12 +24,12 @@ export async function POST(req: Request) {
         <body style="margin:0; padding:20px; background-color: #f4f7f9; text-align: right; font-family: Arial, sans-serif;">
           <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e1e4e8;">
             <div style="background: #0028A5; padding: 30px; text-align: center;">
-              <img src="${logoUrl}" alt="ביטוח ישיר" style="width: 140px; background: white; padding: 10px; border-radius: 10px;">
+              <img src="${logoBase64}" alt="ביטוח ישיר" style="width: 140px; background: white; padding: 10px; border-radius: 10px;">
               <h1 style="color: white; margin-top: 20px; font-size: 24px;">מפת הבאלנס של ${name}</h1>
             </div>
             <div style="padding: 35px; color: #2d3748;">
               <p style="font-size: 18px;">שלום <strong>${name}</strong>,</p>
-              <p>כל הכבוד על מילוי הסקר! הנה סיכום הדירוגים שלך:</p>
+              <p>תודה על מילוי הסקר. הנה ריכוז המיומנויות שלך כפי שדורגו במודל:</p>
               <ul style="padding:0; margin: 25px 0;">${skillsListHtml}</ul>
               <p style="background: #f0f7ff; padding: 15px; border-radius: 10px; border-right: 4px solid #0028A5;">
                 <strong>מצורפת למייל זה המפה הוויזואלית האישית שלך.</strong>
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
           sender: { name: "מערכת מודל הבאלנס", email: "chayayawitz@gmail.com" },
           to: [{ email: "haya.y@yashir.co.il" }],
           subject: `סקר חדש הושלם: ${name}`,
-          htmlContent: `<h3>התקבל סקר חדש מ-${name}</h3><ul style="direction:rtl;">${skillsListHtml}</ul>`,
+          htmlContent: `<div dir="rtl"><h3>התקבל סקר חדש מ-${name}</h3><ul style="padding:0;">${skillsListHtml}</ul></div>`,
           attachment: [{ name: `Balance_Map_${name}.png`, content: chartPngBase64 }]
         }),
       })
