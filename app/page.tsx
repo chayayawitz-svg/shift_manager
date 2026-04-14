@@ -18,7 +18,6 @@ const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// 6 מיומנויות הליבה המעודכנות
 const sections = [
   "התמודדות עם שינויים ומצבי לחץ",
   "הנעה והובלה",
@@ -112,7 +111,7 @@ export default function Home() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
-    // בדיקת תקינות - מוודא שכל המיומנויות דורגו
+    // וידוא שכל 6 המיומנויות דורגו
     const allRated = sections.every(s => skills[s] > 0);
     if (!name || !email || !allRated) {
       alert("נא למלא שם, אימייל ולדרג את כל המיומנויות");
@@ -133,7 +132,7 @@ export default function Home() {
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // שמירה ל-Supabase
+      // שליחה ל-Supabase - הוספת עמודות 7 ו-8 כ-0 כדי למנוע שגיאת Database
       const { error: dbError } = await supabase.from('survey_results').insert([
         { 
           full_name: name, 
@@ -143,13 +142,17 @@ export default function Home() {
           cat3_mutual_guarantee: skills["חשיבה יצירתית וחדשנות"],
           cat4_professionalism: skills["קילריות והובלה ליעדים"],
           cat5_business_connection: skills["יוזמה והשפעה"],
-          cat6_curiosity: skills["עבודת צוות"]
+          cat6_curiosity: skills["עבודת צוות"],
+          cat7_innovation: 0, // שדה וירטואלי כדי לרצות את ה-DB
+          cat8_partnership: 0  // שדה וירטואלי כדי לרצות את ה-DB
         }
       ]);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Supabase Error:", dbError);
+        throw dbError;
+      }
 
-      // שליחה למייל
       const response = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,7 +167,7 @@ export default function Home() {
       setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
 
     } catch (error) { 
-      console.error(error);
+      console.error("Submit Error:", error);
       setStatus("error"); 
     }
     setIsSubmitting(false);
@@ -189,7 +192,7 @@ export default function Home() {
             {isSubmitting ? "מייצר מפה..." : "שלחו לי את המפה !"}
           </button>
           {status === "success" && <p className="text-green-600 text-center mt-6 font-black text-xl">✓ המפה בדרך למייל שלך!</p>}
-          {status === "error" && <p className="text-red-600 text-center mt-6 font-bold underline decoration-2">הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.</p>}
+          {status === "error" && <p className="text-red-600 text-center mt-6 font-bold">הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.</p>}
         </form>
 
         <div ref={chartRef} className="flex-1 bg-gradient-to-br from-[#3b002a] via-[#050824] to-[#020414] rounded-[40px] p-4 lg:p-12 flex flex-col items-center justify-center shadow-2xl min-h-[600px] lg:min-h-[650px] border-2 border-white/10 w-full overflow-hidden relative">
@@ -200,7 +203,6 @@ export default function Home() {
             <ResponsiveContainer width="100%" height={isMobile ? 450 : 550}>
               <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? 100 : 180} data={chartData}>
                 <PolarGrid gridType="circle" stroke="#4B5563" strokeDasharray="3 3" />
-                {/* כאן התיקון לעיגולים: domain קבוע של 0-10 ו-tickCount 11 מבטיח 10 עיגולים פנימיים */}
                 <PolarRadiusAxis domain={[0, 10]} tickCount={11} tick={false} axisLine={false} />
                 <PolarAngleAxis dataKey="subject" tick={(props) => <AxisTick {...props} isMobile={isMobile} />} axisLine={false} />
                 <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.4} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
