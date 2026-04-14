@@ -9,7 +9,6 @@ import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
 
-// שימוש במפתחות שלך
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -24,7 +23,7 @@ const sections = [
 ];
 
 /* -------------------------------------------------
-   רכיבי עיצוב (שחזור 10 עיגולים ודירוג עדין)
+   רכיבי עיצוב (שחזור 10 עיגולים ומראה עדין)
 ------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
@@ -110,14 +109,13 @@ export default function Home() {
     setStatus(null);
 
     try {
-      // 1. צילום המפה
       let png = "";
       if (chartRef.current) {
         const canvas = await html2canvas(chartRef.current, { scale: 2, useCORS: true, backgroundColor: "#020414" });
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // 2. ניסיון שמירה ל-Supabase (בתוך בלוק Try נפרד כדי שלא יפיל את השליחה)
+      // שמירה ל-Database
       try {
         await supabase.from('survey_results').insert([
           { 
@@ -128,11 +126,9 @@ export default function Home() {
             cat7_innovation: 0, cat8_partnership: 0
           }
         ]);
-      } catch (dbErr) {
-        console.warn("Database save failed, continuing to email...", dbErr);
-      }
+      } catch (dbErr) { console.warn("DB skip", dbErr); }
 
-      // 3. שליחה למייל - זה החלק הכי חשוב
+      // שליחה למייל
       const response = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -141,14 +137,15 @@ export default function Home() {
       
       if (response.ok) {
         setStatus("success");
+        // האיפוס יקרה רק אחרי הצלחה
         setName(""); setEmail("");
         setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
       } else {
-        throw new Error("Email delivery failed");
+        throw new Error("Email failed");
       }
 
     } catch (error) { 
-      console.error("Critical Error:", error);
+      console.error(error);
       setStatus("error"); 
     }
     setIsSubmitting(false);
@@ -172,8 +169,19 @@ export default function Home() {
           <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition disabled:bg-gray-400">
             {isSubmitting ? "מייצר מפה..." : "שלחו לי את המפה !"}
           </button>
-          {status === "success" && <p className="text-green-600 text-center mt-6 font-black text-xl">✓ המפה בדרך למייל שלך!</p>}
-          {status === "error" && <p className="text-red-600 text-center mt-6 font-bold">הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.</p>}
+          
+          {/* הודעת הצלחה ירוקה - בדיוק כמו שרצית */}
+          {status === "success" && (
+            <p className="text-green-600 text-center mt-6 font-black text-xl">
+              ✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.
+            </p>
+          )}
+          
+          {status === "error" && (
+            <p className="text-red-600 text-center mt-6 font-bold underline">
+              הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.
+            </p>
+          )}
         </form>
 
         <div ref={chartRef} className="flex-1 bg-gradient-to-br from-[#3b002a] via-[#050824] to-[#020414] rounded-[40px] p-4 lg:p-12 flex flex-col items-center justify-center shadow-2xl min-h-[600px] lg:min-h-[650px] border-2 border-white/10 w-full overflow-hidden relative">
