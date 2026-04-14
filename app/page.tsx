@@ -9,12 +9,10 @@ import { Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
 
-// הגדרות חיבור ל-Supabase
 const supabaseUrl = 'https://rbyufhkwrgvywnovdwei.supabase.co';
 const supabaseKey = 'sb_publishable_Wc1Cj7wgX1oWRZ2x5svXNg_wa2kVU4u';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// 6 מיומנויות הליבה המעודכנות לפי התמונה
 const sections = [
   "התמודדות עם שינויים ומצבי לחץ",
   "הנעה והובלה",
@@ -24,9 +22,6 @@ const sections = [
   "עבודת צוות",
 ];
 
-/* -------------------------------------------------
-   רכיבי עיצוב (שחזור המראה המקורי והעדין)
-------------------------------------------------- */
 const Stars = ({ skill, value, onChange }: any) => (
   <div className="space-y-3 border-b border-gray-100 pb-6 text-right">
     <label className="text-xl font-bold text-blue-950 block">{skill}</label>
@@ -61,7 +56,6 @@ const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
   const nx = d > 0 ? dx / d : 0; const ny = d > 0 ? dy / d : 0;
   const offset = isMobile ? 30 : 45; 
   const newX = x + nx * offset; const newY = y + ny * offset;
-
   let lines: string[] = [];
   const words = payload.value.split(" ");
   let current = "";
@@ -70,7 +64,6 @@ const AxisTick = ({ x, y, cx, cy, payload, isMobile }: any) => {
     else { current += (current ? " " : "") + w; }
   });
   if (current) lines.push(current);
-
   return (
     <text x={newX} y={newY} textAnchor="middle" fill="#fff" fontSize={isMobile ? 9 : 10} fontWeight={700} style={{fontFamily: 'Rubik'}}>
       {lines.map((line, i) => (
@@ -84,9 +77,7 @@ export default function Home() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isMobile, setIsMobile] = useState(false);
-  const [skills, setSkills] = useState<Record<string, number>>(
-    Object.fromEntries(sections.map((s) => [s, 0]))
-  );
+  const [skills, setSkills] = useState<Record<string, number>>(Object.fromEntries(sections.map((s) => [s, 0])));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<any>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -95,16 +86,6 @@ export default function Home() {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    
-    const style = document.createElement("style");
-    style.innerHTML = `
-      @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap');
-      * { font-family: 'Rubik', sans-serif !important; direction: rtl; }
-      .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb { background: #FF3366; border-radius: 10px; }
-    `;
-    document.head.appendChild(style);
-    
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
@@ -128,75 +109,63 @@ export default function Home() {
         png = canvas.toDataURL("image/png", 0.8).split(",")[1];
       }
 
-      // 2. שמירה ל-Supabase - עטוף בבלוק "חירש" שמתעלם משגיאות
-      try {
-        await supabase.from('survey_results').insert([
-          { 
-            full_name: name, email: email, 
-            cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
-            cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
-            cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]],
-            cat7_innovation: 0, cat8_partnership: 0
-          }
-        ]);
-      } catch (dbErr) { console.warn("DB update skipped", dbErr); }
-
-      // 3. שליחה למייל - המנגנון המרכזי שקובע הצלחה
-      const response = await fetch("/api/send-survey-results", {
+      // 2. שליחה למייל - המנגנון המרכזי שקובע הצלחה מבחינת המשתמש
+      const mailResponse = await fetch("/api/send-survey-results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, skills, chartPngBase64: png }),
       });
-      
-      if (response.ok) {
+
+      // 3. ניסיון שמירה ל-Database (עטוף כך שלא יכשיל את כל השליחה)
+      supabase.from('survey_results').insert([
+        { 
+          full_name: name, email: email, 
+          cat1_leadership: skills[sections[0]], cat2_soul_player: skills[sections[1]], 
+          cat3_mutual_guarantee: skills[sections[2]], cat4_professionalism: skills[sections[3]], 
+          cat5_business_connection: skills[sections[4]], cat6_curiosity: skills[sections[5]],
+          cat7_innovation: 0, cat8_partnership: 0
+        }
+      ]).then(({ error }) => { if (error) console.error("Database Silent Error:", error); });
+
+      // אם המייל נשלח (או אפילו אם סתם קיבלנו תשובה מהשרת), אנחנו מראים הצלחה
+      if (mailResponse.ok) {
         setStatus("success");
-        // האיפוס קורה רק בסוף
         setName(""); setEmail("");
         setSkills(Object.fromEntries(sections.map((s) => [s, 0])));
       } else {
-        throw new Error("API Route failure");
+        throw new Error("Mail error");
       }
 
     } catch (error) { 
-      console.error(error);
+      console.error("Submission Error:", error);
       setStatus("error"); 
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
     <div className="min-h-screen p-4 bg-[#020414] text-right" dir="rtl">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
-        
         <form onSubmit={handleSubmit} className="bg-white rounded-[40px] p-8 lg:p-12 flex-1 shadow-2xl w-full">
           <h1 className="text-3xl font-black text-blue-900 mb-8 text-center">מודל הבאלנס <span className="text-[#FF3366]">|</span> קורס מנהלי משמרת</h1>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
             <input placeholder="שם מלא" className="w-full border-b-4 border-gray-100 p-4 text-xl focus:border-[#FF3366] outline-none transition bg-gray-50 rounded-t-2xl text-right" value={name} onChange={(e) => setName(e.target.value)} required />
             <input placeholder="אימייל" type="email" className="w-full border-b-4 border-gray-100 p-4 text-xl focus:border-[#FF3366] outline-none transition bg-gray-50 rounded-t-2xl text-left" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
-
           <div className="space-y-10 max-h-[500px] overflow-y-auto pl-4 custom-scrollbar">
             {sections.map((s) => (
               <Stars key={s} skill={s} value={skills[s]} onChange={(v: number) => setSkills(p => ({ ...p, [s]: v }))} />
             ))}
           </div>
-
           <button disabled={isSubmitting} className="w-full mt-10 bg-[#FF3366] text-white py-5 rounded-full font-black text-2xl shadow-xl active:scale-95 transition disabled:bg-gray-400">
             {isSubmitting ? "מייצר מפה..." : "שלחו לי את המפה !"}
           </button>
-          
-          {/* הודעת ההצלחה שביקשת */}
           {status === "success" && (
-            <p className="text-green-600 text-center mt-6 font-black text-xl">
-              ✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.
-            </p>
+            <p className="text-green-600 text-center mt-6 font-black text-xl">✓ הסקר נשלח בהצלחה! התוצאות נשארו לפנייך.</p>
           )}
-          
           {status === "error" && (
-            <p className="text-red-600 text-center mt-6 font-bold underline">
-              הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.
-            </p>
+            <p className="text-red-600 text-center mt-6 font-bold underline">הייתה שגיאה בשליחה. בדקי שכל הכוכבים סומנו.</p>
           )}
         </form>
 
@@ -208,7 +177,6 @@ export default function Home() {
             <ResponsiveContainer width="100%" height={isMobile ? 450 : 550}>
               <RadarChart cx="50%" cy="50%" outerRadius={isMobile ? 100 : 180} data={chartData}>
                 <PolarGrid gridType="circle" stroke="#4B5563" strokeDasharray="3 3" />
-                {/* 10 עיגולים פנימיים */}
                 <PolarRadiusAxis domain={[0, 10]} tickCount={11} tick={false} axisLine={false} />
                 <PolarAngleAxis dataKey="subject" tick={(props) => <AxisTick {...props} isMobile={isMobile} />} axisLine={false} />
                 <Radar dataKey="value" stroke="#FF3366" fill="#FF3366" fillOpacity={0.4} strokeWidth={4} dot={<DotWithValue />} isAnimationActive={false} />
