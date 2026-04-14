@@ -55,10 +55,10 @@ export default function DashboardPage() {
         <h1 className="text-4xl font-black text-blue-900 mb-8 text-center">סיכום תוצאות מודל הבאלנס</h1>
         
         {isLoading ? (
-          <p className="text-center mt-10 font-bold text-lg">טוען נתונים מהמערכת...</p>
+          <p className="text-center mt-10 font-bold text-lg text-blue-900">טוען נתונים מהמערכת...</p>
         ) : (
           <>
-            {/* כרטיסי סיכום */}
+            {/* כרטיסי סיכום עליונים */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
               <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-blue-900 text-center">
                 <p className="text-gray-500 font-bold text-lg">סה"כ משיבים</p>
@@ -72,25 +72,26 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* גרף עוגה עם תיקון ה-TypeScript */}
+            {/* גרף עוגה משופר ומרווח */}
             <div className="bg-white p-10 rounded-[40px] shadow-2xl mb-12 border border-gray-100 overflow-hidden">
-              <h2 className="text-3xl font-black mb-10 text-blue-900 text-center">התפלגות חוזקות צוותית (ממוצע)</h2>
-              <div className="h-[650px] w-full">
+              <h2 className="text-3xl font-black mb-6 text-blue-900 text-center">התפלגות חוזקות צוותית (ממוצע)</h2>
+              <div className="h-[700px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+                  {/* שוליים קטנים יותר כדי לנצל את השטח הלבן */}
+                  <PieChart margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
                       label={({ cx, cy, midAngle, innerRadius, outerRadius, value, name }) => {
                         const RADIAN = Math.PI / 180;
-                        // תיקון ה-Error: הוספת || 0 כדי למנוע ערכי undefined
                         const mAngle = midAngle || 0;
                         const oRadius = outerRadius || 0;
                         const centerX = cx || 0;
                         const centerY = cy || 0;
 
-                        const radius = oRadius + 40; 
+                        // מרחיק את המילים והמספרים ב-60 פיקסלים מהעיגול
+                        const radius = oRadius + 60; 
                         const x = centerX + radius * Math.cos(-mAngle * RADIAN);
                         const y = centerY + radius * Math.sin(-mAngle * RADIAN);
                         
@@ -101,16 +102,16 @@ export default function DashboardPage() {
                             fill="#4b5563" 
                             textAnchor={x > centerX ? 'start' : 'end'} 
                             dominantBaseline="central" 
-                            fontSize="14" 
+                            fontSize="16" 
                             fontWeight="bold"
                           >
                             {`${name}: ${value}`}
                           </text>
                         );
                       }}
-                      labelLine={{ stroke: '#4b5563', strokeWidth: 2 }}
-                      outerRadius={100}
-                      innerRadius={70}
+                      labelLine={{ stroke: '#4b5563', strokeWidth: 2, length: 30 }}
+                      outerRadius={160} // עיגול גדול יותר
+                      innerRadius={100} // שומר על מראה דונאט
                       paddingAngle={5}
                       dataKey="value"
                     >
@@ -123,36 +124,38 @@ export default function DashboardPage() {
                         verticalAlign="bottom" 
                         height={36} 
                         iconType="circle"
-                        wrapperStyle={{ paddingTop: "60px" }}
+                        wrapperStyle={{ paddingTop: "80px", fontSize: "14px", fontWeight: "bold" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* טבלה גולמית */}
-            <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100">
+            {/* טבלה גולמית מעוצבת */}
+            <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100 mb-10">
                <div className="bg-[#0b1a40] text-white p-6 font-black text-2xl text-center">פירוט תשובות גולמיות</div>
                <div className="overflow-x-auto">
                 <table className="w-full text-right border-collapse">
                   <thead>
-                    <tr className="bg-gray-50 text-blue-900 border-b-2 border-gray-100 text-sm">
+                    <tr className="bg-gray-50 text-blue-900 border-b-2 border-gray-100">
                       <th className="p-5 font-bold">תאריך</th>
                       <th className="p-5 font-bold">שם מלא</th>
-                      <th className="p-5 font-bold">הובלה</th>
-                      <th className="p-5 font-bold">נשמה</th>
-                      <th className="p-5 font-bold">ערבות</th>
-                      <th className="p-5 font-bold">מקצועיות</th>
-                      <th className="p-5 font-bold">ביזנס</th>
-                      <th className="p-5 font-bold">סקרנות</th>
-                      <th className="p-5 font-bold">חדשנות</th>
-                      <th className="p-5 font-bold">שותפויות</th>
+                      <th className="p-5 font-bold text-center">הובלה</th>
+                      <th className="p-5 font-bold text-center">נשמה</th>
+                      <th className="p-5 font-bold text-center">ערבות</th>
+                      <th className="p-5 font-bold text-center">מקצועיות</th>
+                      <th className="p-5 font-bold text-center">ביזנס</th>
+                      <th className="p-5 font-bold text-center">סקרנות</th>
+                      <th className="p-5 font-bold text-center">חדשנות</th>
+                      <th className="p-5 font-bold text-center">שותפויות</th>
                     </tr>
                   </thead>
                   <tbody>
                     {results.map((row) => (
                       <tr key={row.id} className="border-b border-gray-50 hover:bg-blue-50/50 transition-all">
-                        <td className="p-5 text-xs text-gray-500">{new Date(row.created_at).toLocaleDateString('he-IL')}</td>
+                        <td className="p-5 text-sm text-gray-500">
+                          {new Date(row.created_at).toLocaleDateString('he-IL')}
+                        </td>
                         <td className="p-5 font-black text-blue-900">{row.full_name}</td>
                         <td className="p-5 font-bold text-center">{row.cat1_leadership}</td>
                         <td className="p-5 font-bold text-center">{row.cat2_soul_player}</td>
